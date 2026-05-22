@@ -222,6 +222,13 @@ def run(input_data: dict[str, Any]) -> dict[str, Any]:
             if last_user_msg and isinstance(last_user_msg, str) and last_user_msg.strip():
                 restoration_message += f"\n\n**Last user message (verbatim):** {last_user_msg.strip()}"
 
+            # Inject MEMORY.md corrections (merged from local SessionStart_reminder_recovery.py)
+            recent_corrections = snapshot.get("recent_corrections")
+            if recent_corrections and isinstance(recent_corrections, list) and recent_corrections:
+                restoration_message += "\n\n**Recent corrections from MEMORY.md:**"
+                for corr in recent_corrections[:3]:
+                    restoration_message += f"\n- {corr}"
+
             try:
                 env_ctx = restore_decision.envelope.get("environment_context")
                 if env_ctx and isinstance(env_ctx, dict):
@@ -248,12 +255,70 @@ def run(input_data: dict[str, Any]) -> dict[str, Any]:
                 pass
 
             write_restore_smoke_marker(terminal_id, session_id)
+
+            # Update identity.json with transcript_chain for /id skill
+            try:
+                snapshot = restore_decision.envelope.get("resume_snapshot", {})
+                transcript_chain = snapshot.get("transcript_chain")
+                if transcript_chain:
+                    artifacts_root = Path.home() / ".claude" / ".artifacts"
+                    safe_tid = terminal_id.replace("/", "-").replace("\\", "-").replace(":", "-")
+                    identity_file = artifacts_root / safe_tid / "identity.json"
+                    if identity_file.exists():
+                        ident = json.loads(identity_file.read_text(encoding="utf-8"))
+                    else:
+                        ident = {
+                            "terminal": {"id": terminal_id, "source": "snapshot_restore"},
+                            "claude": {
+                                "session_id": session_id,
+                                "transcript_path": snapshot.get("n_1_transcript_path", ""),
+                                "cwd": input_data.get("cwd", ""),
+                            },
+                            "captured_at": snapshot.get("created_at", ""),
+                        }
+                    ident["claude"]["transcript_chain"] = transcript_chain
+                    tmp = identity_file.with_suffix(".tmp")
+                    tmp.write_text(json.dumps(ident, indent=2) + "\n", encoding="utf-8")
+                    if identity_file.exists():
+                        identity_file.unlink()
+                    tmp.replace(identity_file)
+            except Exception as exc:
+                logger.warning("[SessionStart V2] Failed to update identity.json: %s", exc)
+
             return _build_output("Restored previous session context", restoration_message)
 
         reason = restore_decision.reason or "restore rejected"
         payload = raw_payload if isinstance(raw_payload, dict) else None
 
-        if reason == "snapshot expired" or reason.startswith("snapshot evidence "):
+        if reason == "snapshot expired":
+            _reject_if_possible(
+                storage,
+                payload,
+                session_id=session_id,
+                status=SNAPSHOT_REJECTED_STALE,
+                reason=reason,
+            )
+            message = (
+                build_stale_hint(payload, reason)
+                if payload
+                else build_no_snapshot_hint(reason)
+            )
+            output_reason = "No safe current handoff found - stale snapshot rejected"
+        elif reason.startswith("snapshot evidence path "):
+            # Evidence path validation failures are structural defects, not staleness.
+            # Restore path resolution uses a different project_root than capture time —
+            # this is a recoverable mismatch, not corruption, so reject as invalid.
+            _reject_if_possible(
+                storage,
+                payload,
+                session_id=session_id,
+                status=SNAPSHOT_REJECTED_INVALID,
+                reason=reason,
+            )
+            message = build_no_snapshot_hint(reason)
+            output_reason = "No safe current handoff found - invalid snapshot rejected"
+        elif reason.startswith("snapshot evidence "):
+            # Other evidence failures (missing, changed) treated as stale.
             _reject_if_possible(
                 storage,
                 payload,

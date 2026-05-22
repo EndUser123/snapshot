@@ -86,3 +86,59 @@ def test_storage_rejects_wrong_terminal_file_contents(tmp_path):
         json.dump(raw, handle, indent=2)
 
     assert storage.load_handoff() is None
+
+
+class TestFallbackTerminalDetection:
+    """Tests for _fallback_detect_terminal_id session_id derivation."""
+
+    def test_fallback_returns_env_when_available(self, monkeypatch):
+        """When CLAUDE_TERMINAL_ID is set, fallback returns it prefixed."""
+        monkeypatch.setenv("CLAUDE_TERMINAL_ID", "my-term-123")
+        from core.hooks.__lib.terminal_detection import _fallback_detect_terminal_id
+
+        result = _fallback_detect_terminal_id()
+        assert result == "env_my-term-123"
+
+    def test_fallback_returns_session_id_derived_when_all_sources_fail(self, monkeypatch):
+        """When all detection sources return empty, fallback derives from session_id."""
+        # Clear all terminal env vars
+        for var in ["CLAUDE_TERMINAL_ID", "TERMINAL_ID", "TERM_ID", "SESSION_TERMINAL"]:
+            monkeypatch.delenv(var, raising=False)
+        monkeypatch.delenv("WT_SESSION", raising=False)
+
+        from core.hooks.__lib.terminal_detection import _fallback_detect_terminal_id
+
+        result = _fallback_detect_terminal_id(session_id="97bdd749-b5f0-4adc-a82a-a849b2488302")
+        assert result == "session_97bdd749-b5f"
+
+    def test_fallback_returns_empty_when_no_session_id_and_all_sources_fail(
+        self, monkeypatch
+    ):
+        """When no session_id and no env vars, fallback returns empty string."""
+        for var in ["CLAUDE_TERMINAL_ID", "TERMINAL_ID", "TERM_ID", "SESSION_TERMINAL"]:
+            monkeypatch.delenv(var, raising=False)
+        monkeypatch.delenv("WT_SESSION", raising=False)
+
+        from core.hooks.__lib.terminal_detection import _fallback_detect_terminal_id
+
+        result = _fallback_detect_terminal_id()
+        assert result == ""
+
+    def test_resolve_terminal_key_uses_session_id_fallback(self, monkeypatch):
+        """resolve_terminal_key passes session_id to fallback when terminal_id is empty.
+
+        When identity.json is absent/mismatched AND no env vars available,
+        the session_id is passed through to _fallback_detect_terminal_id.
+        """
+        for var in ["CLAUDE_TERMINAL_ID", "TERMINAL_ID", "TERM_ID", "SESSION_TERMINAL"]:
+            monkeypatch.delenv(var, raising=False)
+        monkeypatch.delenv("WT_SESSION", raising=False)
+
+        from core.hooks.__lib.terminal_detection import resolve_terminal_key
+
+        # When all detection sources fail AND no cached identity exists,
+        # session_id is the last resort — this MUST NOT raise ValueError.
+        result = resolve_terminal_key(
+            terminal_id="", session_id="97bdd749-b5f0-4adc-a82a-a849b2488302"
+        )
+        assert result == "session_97bdd749-b5f"

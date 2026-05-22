@@ -29,7 +29,8 @@ def main():
     try:
         data = json.loads(raw_input.lstrip("\ufeff"))
     except json.JSONDecodeError:
-        # Silently fail for malformed JSON to avoid blocking session start
+        # Log malformed JSON before exiting to avoid blocking session start
+        print("[snapshot_SessionStart] Malformed session JSON, skipping restore", file=sys.stderr)
         sys.exit(0)
 
     results = []

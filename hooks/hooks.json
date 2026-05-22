@@ -22,7 +22,6 @@
         ]
       }
     ],
-
     "SessionEnd": [
       {
         "matcher": ".*",
@@ -40,8 +39,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"$CLAUDE_PLUGIN_ROOT/scripts/hooks/snapshot_UserPromptSubmit.py\"",
-            "timeout": 30
+            "command": "python \"$CLAUDE_PLUGIN_ROOT/scripts/hooks/snapshot_UserPromptSubmit.py\""
           }
         ]
       }

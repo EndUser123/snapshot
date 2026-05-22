@@ -72,6 +72,11 @@ from scripts.hooks.__lib.transcript import (  # noqa: F401
     extract_preceding_message,
 )
 
+# Import local hooks utilities for MEMORY.md corrections ranking
+_local_utils_path = Path.home() / ".claude" / "projects" / "P--" / ".claude" / "hooks" / "utils"
+if _local_utils_path.exists() and str(_local_utils_path) not in sys.path:
+    sys.path.insert(0, str(_local_utils_path))
+
 SESSION_PATTERNS = {
     "planning": [
         r"/plan-workflow",
@@ -110,6 +115,61 @@ DECISION_PATTERNS = [
     ),
     (re.compile(r"\bavoid\b|\bshould not\b", re.IGNORECASE), "anti_goal"),
 ]
+
+
+def _build_transcript_chain(
+    current_path: str, old_snapshot: dict | None, max_chain: int = 20
+) -> list[str]:
+    """Build ordered list of transcript paths, newest first, deduped, capped."""
+    chain = [current_path]
+    if old_snapshot:
+        old_chain = old_snapshot.get("transcript_chain", [])
+        chain.extend(old_chain)
+    seen, result = set(), []
+    for p in chain:
+        if p not in seen:
+            result.append(p)
+            seen.add(p)
+    return result[:max_chain]
+
+
+def _extract_active_skill(raw_last_user: str) -> str:
+    """Extract skill name from prompt like '/cc-skills-sdlc:design args' or '/skill args'."""
+    if not raw_last_user:
+        return ""
+    prompt = raw_last_user.strip()
+    m = re.match(r"^/([a-zA-Z0-9_-]+(?:[:/][a-zA-Z0-9_-]+)?)\b", prompt)
+    if m:
+        return m.group(1)
+    return ""
+
+
+def _extract_recent_corrections(
+    goal: str, active_files: list[str], max_count: int = 3
+) -> list[str]:
+    """Extract ranked corrections from user's MEMORY.md.
+
+    Uses the same ranking logic as the local PreCompact.py.
+    """
+    try:
+        from reminder_state import read_memory_md
+        from correction_ranker import rank_corrections
+
+        memory_corrections = read_memory_md()
+        if not memory_corrections:
+            return []
+        recent_corrections = rank_corrections(
+            memory_corrections,
+            goal=goal,
+            active_files=active_files,
+            last_action="",
+            pending_work=[],
+            top_n=max_count,
+        )
+        return recent_corrections
+    except Exception as exc:
+        logger.warning("[PreCompact V2] Failed to extract recent corrections: %s", exc)
+        return []
 
 
 def detect_session_type(user_message: str, active_files: list[str]) -> tuple[str, str]:
@@ -354,7 +414,7 @@ def _extract_slash_command_goal(
     Returns None when raw_last_user is not a slash command.
     """
     match = re.match(
-        r"^(/[a-z][a-z0-9_-]*)(\s+(.+))?$",
+        r"^(/[a-z][a-z0-9_-]*(?::[a-z][a-z0-9_-]+)?)(\s+(.+))?$",
         (raw_last_user or "").strip(),
         re.DOTALL,
     )
@@ -530,28 +590,48 @@ def _resolve_evidence_path(path: str, project_root: Path) -> Path:
     return candidate.resolve()
 
 
+def _make_portable_path(resolved_path: Path, project_root: Path) -> str:
+    """Convert an absolute path to project-relative for cross-environment portability.
+
+    Stores the path as a relative string from project_root, enabling restore to
+    resolve it using the envelope's stored project_root (via detect_project_root at
+    capture time) rather than the restore-time cwd. This ensures capture and restore
+    use the same project root reference.
+    """
+    import os
+
+    try:
+        rel = resolved_path.relative_to(project_root)
+        return os.fspath(rel)
+    except ValueError:
+        # Cannot make relative — store as absolute with normalized separators
+        return os.fspath(resolved_path)
+
+
 def _build_evidence_index(
     project_root: Path, transcript_path: str, active_files: list[str]
 ) -> list[dict[str, Any]]:
     evidence: list[dict[str, Any]] = []
     transcript_id = make_evidence_id()
     resolved_transcript_path = _resolve_evidence_path(transcript_path, project_root)
+    transcript_rel = _make_portable_path(resolved_transcript_path, project_root)
     evidence.append(
         {
             "id": transcript_id,
             "type": "transcript",
             "label": "Current compact transcript",
-            "path": str(resolved_transcript_path),
+            "path": transcript_rel,
             "content_hash": compute_file_content_hash(resolved_transcript_path),
         }
     )
     for path in active_files[:5]:
         resolved_path = _resolve_evidence_path(path, project_root)
+        portable_path = _make_portable_path(resolved_path, project_root)
         evidence_item: dict[str, Any] = {
             "id": make_evidence_id(),
             "type": "file",
             "label": Path(path).name or path,
-            "path": str(resolved_path),
+            "path": portable_path,
         }
         content_hash = compute_file_content_hash(resolved_path)
         if content_hash:
@@ -630,21 +710,47 @@ def run(input_data: dict[str, Any]) -> dict[str, Any]:
         parser = TranscriptParser(transcript_path)
         active_files = _extract_active_files(parser)
 
-        goal_origin = "user_message"
+        # Extract raw last user message first (before any filtering)
         raw_last_user = parser.extract_last_user_message()
-        slash_result = _extract_slash_command_goal(raw_last_user, active_files)
-        if slash_result:
-            goal, goal_origin = slash_result
+
+        # Only use raw_last_user if it's NOT a slash command invocation —
+        # slash commands go through transcript-based extraction which properly
+        # skips meta-instructions and filters to the actual user goal.
+        # raw_last_user can contain SKILL.md content that contaminated goal.
+        slash_match = re.match(
+            r"^/[a-z][a-z0-9_-]*(?::[a-z][a-z0-9_-]+)?(?:\s+|--?\s)",
+            (raw_last_user or "").strip(),
+        )
+        if slash_match:
+            # raw_last_user is a skill invocation — skip it, rely on transcript
+            raw_last_user = None
+        else:
+            raw_last_user = (raw_last_user or "").strip() or None
+
+        goal_origin = "user_message"
+        if raw_last_user:
+            goal = raw_last_user
+            goal_origin = "raw_user_message"
             message_intent = "instruction"
             logger.info(
-                "[PreCompact V2] Slash command captured as goal: %r, origin=%s",
-                goal,
-                goal_origin,
+                "[PreCompact V2] Raw user message captured as goal: %r (len=%d)",
+                goal[:120] if goal else None,
+                len(goal) if goal else 0,
             )
         else:
-            goal_result = extract_last_substantive_user_message(transcript_path)
-            goal = goal_result.get("goal", "Unknown task")
-            message_intent = goal_result.get("message_intent", "instruction")
+            slash_result = _extract_slash_command_goal(None, active_files)
+            if slash_result:
+                goal, goal_origin = slash_result
+                message_intent = "instruction"
+                logger.info(
+                    "[PreCompact V2] Slash command captured as goal: %r, origin=%s",
+                    goal,
+                    goal_origin,
+                )
+            else:
+                goal_result = extract_last_substantive_user_message(transcript_path)
+                goal = goal_result.get("goal", "Unknown task")
+                message_intent = goal_result.get("message_intent", "instruction")
 
         if not goal or goal == "Unknown task" or is_meta_discussion(goal):
             fallback_goal = parser.extract_last_user_message()
@@ -749,6 +855,7 @@ def run(input_data: dict[str, Any]) -> dict[str, Any]:
         n_2_transcript_path: str | None = None
         session_id = input_data.get("session_id", "")
         session_chain: list[str] = []
+        old_snapshot: dict | None = None
         if old_handoff:
             old_snapshot = old_handoff["resume_snapshot"]
             n_2_transcript_path = old_snapshot["n_1_transcript_path"]
@@ -759,6 +866,10 @@ def run(input_data: dict[str, Any]) -> dict[str, Any]:
                 session_chain = [old_snapshot.get("source_session_id", ""), session_id]
         else:
             session_chain = [session_id]
+
+        transcript_chain = _build_transcript_chain(transcript_path, old_snapshot)
+        active_skill = _extract_active_skill(raw_last_user or "")
+        recent_corrections = _extract_recent_corrections(goal, active_files)
 
         resume_snapshot = build_resume_snapshot(
             terminal_id=terminal_id,
@@ -779,8 +890,11 @@ def run(input_data: dict[str, Any]) -> dict[str, Any]:
             quality_score=quality_score,
             tasks_snapshot=tasks_snapshot,
             goal_origin=goal_origin,
+            active_skill=active_skill,
             session_chain=session_chain,
             last_user_message=raw_last_user,
+            recent_corrections=recent_corrections,
+            transcript_chain=transcript_chain,
         )
         envelope = build_envelope(
             resume_snapshot=resume_snapshot,
@@ -847,23 +961,31 @@ def run(input_data: dict[str, Any]) -> dict[str, Any]:
             ),
         }
     except HookInputError as exc:
+        # Fail-open: snapshot is a recovery convenience, not a prerequisite
+        # for compaction. Bad hook input shouldn't block /compact.
+        logger.warning("[PreCompact V2] Hook input validation failed: %s", exc)
         return {
-            "decision": "block",
-            "reason": f"Handoff V2 capture input validation failed: {exc}",
-            "additionalContext": f"🚫 Handoff V2 capture rejected invalid hook input: {exc}",
+            "decision": "approve",
+            "reason": f"Snapshot skipped (input invalid): {exc}",
+            "additionalContext": f"⚠️ Handoff V2 skipped — hook input invalid: {exc}",
         }
     except SnapshotValidationError as exc:
+        # Fail-open: a malformed envelope means we couldn't save THIS snapshot,
+        # not that compaction itself should fail.
+        logger.warning("[PreCompact V2] Envelope validation failed: %s", exc)
         return {
-            "decision": "block",
-            "reason": f"Handoff V2 capture validation failed: {exc}",
-            "additionalContext": f"🚫 Handoff V2 envelope validation failed: {exc}",
+            "decision": "approve",
+            "reason": f"Snapshot skipped (envelope invalid): {exc}",
+            "additionalContext": f"⚠️ Handoff V2 skipped — envelope invalid: {exc}",
         }
     except Exception as exc:
+        # Fail-open on all other capture errors. Defense in depth: even if a
+        # future regression reintroduces a crash, /compact stays unblocked.
         logger.error("[PreCompact V2] Capture failed: %s", exc, exc_info=True)
         return {
-            "decision": "block",
-            "reason": f"Handoff V2 capture failed: {exc}",
-            "additionalContext": f"🚫 Handoff V2 capture failed: {exc}",
+            "decision": "approve",
+            "reason": f"Snapshot skipped (non-fatal): {exc}",
+            "additionalContext": f"⚠️ Handoff V2 capture failed but compaction continues: {exc}",
         }
 
 

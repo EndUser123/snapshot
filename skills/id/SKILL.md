@@ -10,7 +10,7 @@ triggers:
 aliases:
   - /id
 allowed-tools: Bash, Read
-workflow_steps: 7
+workflow_steps: 8
 ---
 
 # /id — Strict Identity Command
@@ -64,6 +64,53 @@ ls -la "$(python -c "import json,sys; d=json.load(open(sys.argv[1])); print(d['c
 | Captured | {captured_at} |
 ```
 
+5a. **Always also report the hook-fallback resolution** for comparison. This is the
+diagnostic surface that lets you see what the snapshot hook system would resolve
+in this environment, and whether it diverges from the strict (WT_SESSION) result:
+
+```bash
+python -c "
+import os, sys
+sys.path.insert(0, 'P:\\\\\\packages/snapshot/scripts/hooks/__lib')
+from terminal_detection import _fallback_detect_terminal_id, _lookup_with_path
+session_id = os.environ.get('CLAUDE_SESSION_ID', '')  # or pass in from caller
+cwd = os.getcwd()
+fallback_tid = _fallback_detect_terminal_id(session_id)
+# Re-derive which path matched for the dual-output display.
+# (The fallback already logged this to terminal_resolution.jsonl, but for
+# immediate display we reconstruct the most-likely path.)
+path = 'unknown'
+if os.environ.get('CLAUDE_TERMINAL_ID'):
+    path = 'env'
+elif os.environ.get('WT_SESSION'):
+    path = 'wt_session'
+else:
+    _, sub = _lookup_with_path(session_id, cwd)
+    path = sub or ('synthetic' if session_id else 'empty')
+
+strict_tid = f'console_{os.environ.get(\"WT_SESSION\",\"\")}' if os.environ.get('WT_SESSION') else ''
+print()
+print('## Hook Fallback Resolution')
+print()
+print('| Source | Terminal ID | Path |')
+print('|--------|-------------|------|')
+print(f'| Strict (/id contract) | {strict_tid or \"unavailable — no WT_SESSION\"} | wt_session |')
+print(f'| Hook fallback | {fallback_tid or \"empty\"} | {path} |')
+if strict_tid and strict_tid != fallback_tid:
+    print(f'| **Divergence** | ⚠️ strict and fallback disagree | — |')
+elif not strict_tid and fallback_tid:
+    print(f'| **Divergence** | strict unavailable; hooks resolved via {path} | — |')
+else:
+    print(f'| Divergence | none ✓ | — |')
+"
+```
+
+This block always runs, regardless of whether the strict path succeeded. It
+provides:
+- The strict identity (authoritative when WT_SESSION exists)
+- The hook fallback identity (always returns something via the 6-step chain)
+- A divergence flag when they disagree
+
 6. Show deduplicated session history for this terminal (unique session_id → transcript_path pairs, most recent first):
 
 ```bash
@@ -90,6 +137,31 @@ for e in reversed(result):
 "
 
 If registry is empty or missing, omit the history section silently.
+
+6.5. **Transcript chain** — if `transcript_chain` is present in `identity.json`, display it as a numbered list (newest → oldest):
+
+```bash
+python -c "
+import json, os, sys
+
+wt = os.environ.get('WT_SESSION', '')
+ident_path = f'P:\\\\.claude/.artifacts/console_{wt}/identity.json'
+try:
+    ident = json.load(open(ident_path))
+except:
+    sys.exit(0)
+
+chain = ident.get('claude', {}).get('transcript_chain', [])
+if not chain:
+    sys.exit(0)
+
+print()
+print('Transcript Chain (newest \8594 oldest)')
+for i, p in enumerate(chain, 1):
+    print(f'  {i}. {p}')
+print(f'  ({len(chain)} transcripts total)')
+"
+```
 
 7. **Cross-terminal session chain** — detect if the same `session_id` appears across a *different* terminal (indicating a resume event). Only output if cross-terminal entries exist:
 

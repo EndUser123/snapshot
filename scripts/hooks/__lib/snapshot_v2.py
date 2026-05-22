@@ -591,8 +591,11 @@ def build_resume_snapshot(
     tasks_snapshot: list[dict[str, Any]] | None = None,
     open_questions: list[Any] | None = None,
     goal_origin: str | None = None,  # Source of the goal value (user_message, preceding_message, skill_args_unfiltered)
+    active_skill: str | None = None,  # Skill name extracted from slash command
     session_chain: list[str] | None = None,  # Full session chain (oldest-first session IDs)
     last_user_message: str | None = None,  # Verbatim last user message (ADR-006)
+    recent_corrections: list[str] | None = None,  # MEMORY.md corrections ranked by relevance
+    transcript_chain: list[str] | None = None,  # Pre-computed ordered list of transcript paths (newest first)
 ) -> dict[str, Any]:
     """Build the V2 resume snapshot."""
     # QUAL-005: Validate message_intent is a recognized value
@@ -637,6 +640,12 @@ def build_resume_snapshot(
         snapshot["session_chain"] = session_chain
     if last_user_message is not None:
         snapshot["last_user_message"] = last_user_message
+    if active_skill is not None:
+        snapshot["active_skill"] = active_skill
+    if recent_corrections is not None:
+        snapshot["recent_corrections"] = recent_corrections
+    if transcript_chain is not None:
+        snapshot["transcript_chain"] = transcript_chain
     return snapshot
 
 

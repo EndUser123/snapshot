@@ -25,8 +25,12 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-# Resolve paths explicitly — this file lives in packages/handoff/scripts/hooks/
-CLAUDE_DIR = Path("P:\\\\\\.claude")
+# Try hardcoded P: path first, fall back to home directory
+_HARD_CODED_CLAUDE_DIR = Path("P:\\.claude")
+if _HARD_CODED_CLAUDE_DIR.exists():
+    CLAUDE_DIR = _HARD_CODED_CLAUDE_DIR
+else:
+    CLAUDE_DIR = Path.home() / ".claude"
 STATE_DIR = CLAUDE_DIR / "state" / "session_tldr"
 
 # Import terminal_id resolver from hook_base (centralized source of truth)

@@ -203,7 +203,7 @@ def _build_recovery_message(envelope: dict) -> str:
         logging.getLogger(__name__).warning(
             "[task_injector] Failed to import snapshot_v2: %s", exc
         )
-        return ""
+        return "[task_injector] Warning: snapshot_v2 unavailable, recovery context not generated"
 
 
 # ---------------------------------------------------------------------------

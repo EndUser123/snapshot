@@ -19,6 +19,7 @@ DEFAULT_REGISTRY_PATH = Path("P:\\\\\\.claude/.artifacts/session_registry.jsonl"
 def query_registry(
     *,
     terminal_id: str | None = None,
+    session_id: str | None = None,
     cwd: str | None = None,
     limit: int = 20,
     registry_path: Path = DEFAULT_REGISTRY_PATH,
@@ -27,6 +28,7 @@ def query_registry(
 
     Args:
         terminal_id: Filter to entries for this terminal.
+        session_id: Filter to entries for this session (cross-terminal chain).
         cwd: Filter to entries matching this working directory.
         limit: Maximum entries to return (default 20).
         registry_path: Path to the JSONL registry file.
@@ -54,6 +56,8 @@ def query_registry(
         if not isinstance(entry, dict):
             continue
         if terminal_id is not None and entry.get("terminal_id") != terminal_id:
+            continue
+        if session_id is not None and entry.get("session_id") != session_id:
             continue
         if cwd is not None and entry.get("cwd") != cwd:
             continue

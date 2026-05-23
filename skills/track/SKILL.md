@@ -77,7 +77,7 @@ Alias for `/track done` — mark current thread as complete.
 
 ## Session Registry Integration
 
-The session registry (`P:\\\\\\.claude/.artifacts/session_registry.jsonl`) provides cross-terminal session history from PreCompact captures.
+The session registry (`P://.claude/.artifacts/session_registry.jsonl`) provides cross-terminal session history from PreCompact captures.
 
 ### `/track sessions`
 Show recent compaction history across all terminals:

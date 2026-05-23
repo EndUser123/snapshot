@@ -12,6 +12,7 @@ if str(_HOOKS_DIR) not in sys.path:
 # Import child hooks
 import SessionStart_snapshot_restore as restore
 import SessionStart_tldr as tldr
+import snapshot_SessionStart_identity_capture as identity_capture
 
 _log = logging.getLogger(__name__)
 
@@ -19,6 +20,7 @@ _log = logging.getLogger(__name__)
 SEQUENCE = [
     ("restore", restore.run),
     ("tldr", tldr.run),
+    ("identity_capture", identity_capture.run),
 ]
 
 def main():

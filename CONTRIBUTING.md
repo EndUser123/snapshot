@@ -6,11 +6,11 @@ Thank you for your interest in contributing to handoff!
 
 ```bash
 # Clone the repository
-git clone https://github.com/csf-nip/handoff.git P:\\\\\\packages/handoff
-cd P:\\\\\\packages/handoff
+git clone https://github.com/csf-nip/handoff.git P://packages/handoff
+cd P://packages/handoff
 
 # Create junction for local skill development
-powershell -Command "New-Item -ItemType Junction -Path '$CLAUDE_ROOT/skills\handoff' -Target 'P:\\\\\\packages\handoff\skill'"
+powershell -Command "New-Item -ItemType Junction -Path '$CLAUDE_ROOT/skills\handoff' -Target 'P://packages/handoff/skill'"
 
 # Install in editable mode
 pip install -e .

@@ -58,24 +58,24 @@ For active development, use symlinks for instant feedback:
 
 ```powershell
 # Windows (symlinks require admin or Developer Mode)
-cd P:\\\\\\.claude/hooks
-cmd /c "mklink PreCompact_handoff_capture.py P:\\\\\\packages\handoff\core\hooks\PreCompact_handoff_capture.py"
-cmd /c "mklink SessionStart_handoff_restore.py P:\\\\\\packages\handoff\core\hooks\SessionStart_handoff_restore.py"
+cd P://.claude/hooks
+cmd /c "mklink PreCompact_handoff_capture.py P://packages/handoff/core/hooks/PreCompact_handoff_capture.py"
+cmd /c "mklink SessionStart_handoff_restore.py P://packages/handoff/core/hooks/SessionStart_handoff_restore.py"
 ```
 
 ### Running Tests
 
 ```bash
 # Quick test
-pytest P:\\\\\\packages/handoff/tests/ -q
+pytest P://packages/handoff/tests/ -q
 
 # Specific test suites
-pytest P:\\\\\\packages/handoff/core/tests/test_handoff_hooks.py -q
-pytest P:\\\\\\packages/handoff/tests/test_canonical_goal_extraction.py -q
-pytest P:\\\\\\packages/handoff/tests/test_pending_operations_extraction.py -q
+pytest P://packages/handoff/core/tests/test_handoff_hooks.py -q
+pytest P://packages/handoff/tests/test_canonical_goal_extraction.py -q
+pytest P://packages/handoff/tests/test_pending_operations_extraction.py -q
 
 # With coverage
-pytest P:\\\\\\packages/handoff/tests/ --cov=core --cov-report=term-missing
+pytest P://packages/handoff/tests/ --cov=core --cov-report=term-missing
 ```
 
 **Expected**: All 103 tests pass.
@@ -126,14 +126,14 @@ SHA256 checksums validate data integrity.
 
 ### Broken Symlinks After Brownfield Conversion
 
-After converting from Python library (src/) to plugin (core/), symlinks in `P:\\\\\\.claude/hooks/` may still point to old `src/` paths.
+After converting from Python library (src/) to plugin (core/), symlinks in `P://.claude/hooks/` may still point to old `src/` paths.
 
 **Fix**: Remove and recreate symlinks with correct `core/` paths:
 ```powershell
-cd P:\\\\\\.claude/hooks
+cd P://.claude/hooks
 rm PreCompact_handoff_capture.py SessionStart_handoff_restore.py
-cmd /c "mklink PreCompact_handoff_capture.py P:\\\\\\packages\handoff\core\hooks\PreCompact_handoff_capture.py"
-cmd /c "mklink SessionStart_handoff_restore.py P:\\\\\\packages\handoff\core\hooks\SessionStart_handoff_restore.py"
+cmd /c "mklink PreCompact_handoff_capture.py P://packages/handoff/core/hooks/PreCompact_handoff_capture.py"
+cmd /c "mklink SessionStart_handoff_restore.py P://packages/handoff/core/hooks/SessionStart_handoff_restore.py"
 ```
 
 ### Test Pollution
@@ -235,11 +235,11 @@ Before releasing a new version:
 
 - Hook stderr is treated as error by Claude Code
 - Use stdout for output or silence (no output)
-- Log to file for debugging: `P:\\\\\\packages/handoff/.claude/state/handoff/debug.log`
+- Log to file for debugging: `P://packages/handoff/.claude/state/handoff/debug.log`
 
 ### State Management
 
-- Handoff state: `P:\\\\\\packages/handoff/.claude/state/handoff/{terminal}_handoff.json`
+- Handoff state: `P://packages/handoff/.claude/state/handoff/{terminal}_handoff.json`
 - Per-terminal isolation: Each terminal has independent state file
 - Status values: pending, consumed, rejected_stale, rejected_invalid
 - Freshness window: 20 minutes (override with `HANDOFF_FRESHNESS_MINUTES`)
@@ -263,21 +263,21 @@ logging.basicConfig(level=logging.DEBUG)
 
 ```bash
 # View current handoff state
-cat P:\\\\\\packages/handoff/.claude/state/handoff/{terminal}_handoff.json
+cat P://packages/handoff/.claude/state/handoff/{terminal}_handoff.json
 ```
 
 ### Verify Hook Registration
 
 ```bash
 # Check hooks are registered
-cat P:\\\\\\.claude/settings.json | grep -A5 "hooks"
+cat P://.claude/settings.json | grep -A5 "hooks"
 ```
 
 ### Test Isolation
 
 ```bash
 # Run tests with verbose output
-pytest P:\\\\\\packages/handoff/tests/ -v -s
+pytest P://packages/handoff/tests/ -v -s
 ```
 
 ## Related Documentation

@@ -6,7 +6,7 @@ Validate the live Handoff V2 compact/resume path with a real compaction event in
 
 ## Preconditions
 
-- The active hook entrypoints in `$CLAUDE_ROOT/hooks` should be symlinks to `P:\\\\\\packages\handoff\core\hooks`.
+- The active hook entrypoints in `$CLAUDE_ROOT/hooks` should be symlinks to `P://packages/handoff/core/hooks`.
 - Use the same terminal before and after compaction.
 - Evaluate only the current V2 resume behavior documented in this package.
 
@@ -112,14 +112,14 @@ If the snapshot is stale, the hint may also include:
 Useful local checks:
 
 ```bash
-pytest P:\\\\\\packages/handoff/core/tests/test_handoff_hooks.py -q
-pytest P:\\\\\\packages/handoff/tests/test_terminal_isolation.py -q
-pytest P:\\\\\\packages/handoff/tests/test_canonical_goal_extraction.py -q
-pytest P:\\\\\\packages/handoff/tests/test_variable_shadowing_fix.py -q
+pytest P://packages/handoff/core/tests/test_handoff_hooks.py -q
+pytest P://packages/handoff/tests/test_terminal_isolation.py -q
+pytest P://packages/handoff/tests/test_canonical_goal_extraction.py -q
+pytest P://packages/handoff/tests/test_variable_shadowing_fix.py -q
 ```
 
 ## Notes
 
-- The handoff file is per-terminal: `P:\\\\\\.claude/state/handoff/{terminal_id}_handoff.json`
+- The handoff file is per-terminal: `P://.claude/state/handoff/{terminal_id}_handoff.json`
 - Freshness defaults to 20 minutes
 - Evidence is reference-only; the automatic restore path injects only the V2 resume payload

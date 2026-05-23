@@ -4,13 +4,13 @@
 
 The handoff system uses **symbolic links** to maintain a single source of truth:
 
-- **Source of truth**: `P:\\\\\\packages/handoff/src/handoff/hooks/` (all source code)
-- **Symbolic links in**: `P:\\\\\\.claude/hooks/` → point to source files
+- **Source of truth**: `P://packages/handoff/src/handoff/hooks/` (all source code)
+- **Symbolic links in**: `P://.claude/hooks/` → point to source files
 
 ## Directory Structure
 
 ```
-P:\\\\\\packages/handoff/
+P://packages/handoff/
 ├── src/
 │   └── handoff/
 │       ├── hooks/                      # Source hook scripts (SOURCE OF TRUTH)
@@ -23,7 +23,7 @@ P:\\\\\\packages/handoff/
 │       └── ... (other modules)
 └── HANDOFF_STRUCTURE.md                # This file
 
-P:\\\\\\.claude/hooks/
+P://.claude/hooks/
 ├── PreCompact_handoff_capture.py       → Symbolic link to package source
 └── SessionStart_handoff_restore.py     → Symbolic link to package source
 ```
@@ -53,7 +53,7 @@ Symbolic links on Windows require **Administrator privileges** or **Developer Mo
 After enabling admin privileges or Developer Mode:
 
 ```bash
-cd P:\\\\\\.claude/hooks
+cd P://.claude/hooks
 mklink PreCompact_handoff_capture.py ..\..\packages\handoff\src\handoff\hooks\PreCompact_handoff_capture.py
 mklink SessionStart_handoff_restore.py ..\..\packages\handoff\src\handoff\hooks\SessionStart_handoff_restore.py
 ```
@@ -69,7 +69,7 @@ New-Item -ItemType SymbolicLink -Path "SessionStart_handoff_restore.py" -Value "
 
 Check that symlinks were created successfully:
 ```bash
-cd P:\\\\\\.claude/hooks
+cd P://.claude/hooks
 ls -la PreCompact_handoff_capture.py SessionStart_handoff_restore.py
 ```
 
@@ -83,7 +83,7 @@ SessionStart_handoff_restore.py -> ..\..\packages\handoff\src\handoff\hooks\Sess
 
 ### Making Changes to Handoff Hooks
 
-1. **Edit source files** in `P:\\\\\\packages/handoff/src/handoff/hooks/`
+1. **Edit source files** in `P://packages/handoff/src/handoff/hooks/`
 2. **Changes are immediately reflected** in `.claude/hooks/` via symlinks
 3. **Test** the changes
 4. **Commit** the package repository
@@ -95,11 +95,11 @@ The handoff package has its own git repository at `https://github.com/EndUser123
 ```bash
 # 1. Edit source files in package
 # 2. Test changes
-cd P:\\\\\\.claude/hooks/tests
+cd P://.claude/hooks/tests
 python -m pytest test_handoff_hooks.py -v
 
 # 3. Commit to package repository
-cd P:\\\\\\packages/handoff
+cd P://packages/handoff
 git add src/handoff/hooks/
 git commit -m "feat: update handoff hooks for ..."
 git push
@@ -132,7 +132,7 @@ Then re-clone the repository.
 
 **Solution**: Make sure source files have execute permissions:
 ```bash
-chmod +x P:\\\\\\packages/handoff/src/handoff/hooks/*.py
+chmod +x P://packages/handoff/src/handoff/hooks/*.py
 ```
 
 ## Why Symbolic Links?
@@ -163,6 +163,6 @@ This structure was adopted on 2026-03-07 to replace broken symlinks that pointed
 
 ## Related Files
 
-- `P:\\\\\\packages/handoff/src/handoff/hooks/PreCompact_handoff_capture.py` - Capture hook
-- `P:\\\\\\packages/handoff/src/handoff/hooks/SessionStart_handoff_restore.py` - Restore hook
-- `P:\\\\\\.claude/hooks/tests/test_handoff_hooks.py` - Unit tests
+- `P://packages/handoff/src/handoff/hooks/PreCompact_handoff_capture.py` - Capture hook
+- `P://packages/handoff/src/handoff/hooks/SessionStart_handoff_restore.py` - Restore hook
+- `P://.claude/hooks/tests/test_handoff_hooks.py` - Unit tests

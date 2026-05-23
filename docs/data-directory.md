@@ -27,7 +27,7 @@ Examples:
 ## Storage Location
 
 Configured via environment variable:
-- `HANDOFF_PROJECT_ROOT` - Defaults to `P:\\\\\\`
+- `HANDOFF_PROJECT_ROOT` - Defaults to `P://`
 - Data stored at: `$PROJECT_ROOT/.claude/handoffs/`
 
 ## Management
@@ -65,10 +65,10 @@ If you have existing checkpoint data, migrate using:
 
 ```bash
 # Install handoff package
-pip install -e P:\\\\\\packages/handoff/
+pip install -e P://packages/handoff/
 
 # Rename data directory
-mv P:\\\\\\\.claude/checkpoints P:\\\\\\\.claude/handoffs
+mv P:///.claude/checkpoints P:///.claude/handoffs
 
 # Update environment variables in shell config
 # Replace CHECKPOINT_* with HANDOFF_*
@@ -96,6 +96,6 @@ packages/handoff/       # Handoff package
 
 ## Related Documentation
 
-- **Package README:** `P:\\\\\\packages/handoff/README.md`
-- **API Reference:** `P:\\\\\\packages/handoff/docs/API.md`
-- **User Guide:** `P:\\\\\\packages/handoff/docs/user-guide.md`
+- **Package README:** `P://packages/handoff/README.md`
+- **API Reference:** `P://packages/handoff/docs/API.md`
+- **User Guide:** `P://packages/handoff/docs/user-guide.md`

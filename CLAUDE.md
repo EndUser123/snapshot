@@ -22,4 +22,4 @@ Skills MUST NOT write state to their own directory or to the package root.
 
 ## Installation
 
-Skills surfaced via junctions in `P:/\.claude/skills/`.
+Skills surfaced via junctions in `P://.claude/skills/`.

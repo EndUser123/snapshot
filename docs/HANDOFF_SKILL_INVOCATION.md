@@ -6,9 +6,9 @@ Skill invocation tracking is optional supporting metadata, not part of the core 
 
 The live handoff implementation is in:
 
-- `P:\\\\\\packages/handoff/core/hooks/PreCompact_handoff_capture.py`
-- `P:\\\\\\packages/handoff/core/hooks/SessionStart_handoff_restore.py`
-- `P:\\\\\\packages/handoff/core/hooks/__lib/transcript.py`
+- `P://packages/handoff/core/hooks/PreCompact_handoff_capture.py`
+- `P://packages/handoff/core/hooks/SessionStart_handoff_restore.py`
+- `P://packages/handoff/core/hooks/__lib/transcript.py`
 
 The core V2 restore payload remains:
 
@@ -47,7 +47,7 @@ Any extraction must work with Claude-style transcript content, including:
 
 That logic belongs in:
 
-- `P:\\\\\\packages/handoff/core/hooks/__lib/transcript.py`
+- `P://packages/handoff/core/hooks/__lib/transcript.py`
 
 If extraction fails:
 
@@ -83,7 +83,7 @@ Example shape:
       "id": "ev_skill_001",
       "type": "transcript",
       "label": "Skill invocation context",
-      "path": "P:\\\\\\path/to/transcript.jsonl",
+      "path": "P://path/to/transcript.jsonl",
       "message_id": "example-message-id"
     }
   ]

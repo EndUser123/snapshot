@@ -88,7 +88,7 @@ from core.hooks.__lib import handoff_store
 **Local Development Setup:**
 ```powershell
 # Windows - Create junction once
-New-Item -ItemType Junction -Path "C:\Users\brsth\.claude\plugins\handoff" -Target "P:\\\\\\packages\handoff"
+New-Item -ItemType Junction -Path "C:\Users\brsth\.claude\plugins\handoff" -Target "P://packages/handoff"
 
 # Reload Claude Code
 /reload
@@ -132,9 +132,9 @@ New-Item -ItemType Junction -Path "C:\Users\brsth\.claude\plugins\handoff" -Targ
   pip install -e packages/handoff/
 
   # NEW
-  /plugin P:\\\\\\packages/handoff
+  /plugin P://packages/handoff
   # OR (local dev)
-  New-Item -ItemType Junction -Path "~/.claude/plugins/handoff" -Target "P:\\\\\\packages/handoff"
+  New-Item -ItemType Junction -Path "~/.claude/plugins/handoff" -Target "P://packages/handoff"
   ```
 
 - **Import paths changed in dependent code:**

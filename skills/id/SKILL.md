@@ -23,7 +23,7 @@ This skill uses **hook-captured identity only**. It does not guess, scan files b
 
 Authoritative sources:
 - `WT_SESSION` env var → terminal identity (per-tab UUID)
-- `P:\\\\\\.claude/.artifacts/{terminal_id}/identity.json` → session_id, transcript_path, cwd (written by SessionStart hook)
+- `P://.claude/.artifacts/{terminal_id}/identity.json` → session_id, transcript_path, cwd (written by SessionStart hook)
 
 ## Execution
 
@@ -36,7 +36,7 @@ echo $WT_SESSION
 2. Build terminal_id as `console_{WT_SESSION}` and read the identity cache:
 
 ```bash
-cat "P:\\\\\\.claude/.artifacts/console_${WT_SESSION}/identity.json"
+cat "P://.claude/.artifacts/console_${WT_SESSION}/identity.json"
 ```
 
 3. Validate required fields are present and non-empty:
@@ -47,7 +47,7 @@ cat "P:\\\\\\.claude/.artifacts/console_${WT_SESSION}/identity.json"
 4. Verify transcript file exists:
 
 ```bash
-ls -la "$(python -c "import json,sys; d=json.load(open(sys.argv[1])); print(d['claude']['transcript_path'])" "P:\\\\\\.claude/.artifacts/console_${WT_SESSION}/identity.json")"
+ls -la "$(python -c "import json,sys; d=json.load(open(sys.argv[1])); print(d['claude']['transcript_path'])" "P://.claude/.artifacts/console_${WT_SESSION}/identity.json")"
 ```
 
 5. Report identity in this format:
@@ -71,7 +71,7 @@ in this environment, and whether it diverges from the strict (WT_SESSION) result
 ```bash
 python -c "
 import os, sys
-sys.path.insert(0, 'P:\\\\\\packages/snapshot/scripts/hooks/__lib')
+sys.path.insert(0, 'P://packages/snapshot/scripts/hooks/__lib')
 from terminal_detection import _fallback_detect_terminal_id, _lookup_with_path
 session_id = os.environ.get('CLAUDE_SESSION_ID', '')  # or pass in from caller
 cwd = os.getcwd()
@@ -116,7 +116,7 @@ provides:
 ```bash
 python -c "
 import sys, os
-sys.path.insert(0, 'P:\\\\\\packages/snapshot/scripts/hooks/__lib')
+sys.path.insert(0, 'P://packages/snapshot/scripts/hooks/__lib')
 from session_registry import query_registry
 tid = f'console_{__import__(\"os\").environ.get(\"WT_SESSION\",\"\")}'
 entries = query_registry(terminal_id=tid, limit=50)
@@ -145,7 +145,7 @@ python -c "
 import json, os, sys
 
 wt = os.environ.get('WT_SESSION', '')
-ident_path = f'P:\\\\.claude/.artifacts/console_{wt}/identity.json'
+ident_path = f'P://.claude/.artifacts/console_{wt}/identity.json'
 try:
     ident = json.load(open(ident_path))
 except:
@@ -168,7 +168,7 @@ print(f'  ({len(chain)} transcripts total)')
 ```bash
 python -c "
 import sys, os, json
-sys.path.insert(0, 'P:\\\\\\packages/snapshot/scripts/hooks/__lib')
+sys.path.insert(0, 'P://packages/snapshot/scripts/hooks/__lib')
 from session_registry import query_registry
 
 tid = f'console_{os.environ.get(\"WT_SESSION\",\"\")}'
@@ -180,7 +180,7 @@ current_sids = list({e.get('session_id','') for e in current_entries if e.get('s
 if not current_sids:
     sys.exit(0)
 
-reg = 'P:\\\\\\.claude/.artifacts/session_registry.jsonl'
+reg = 'P://.claude/.artifacts/session_registry.jsonl'
 cross_entries = []
 try:
     with open(reg, encoding='utf-8') as f:
@@ -229,7 +229,7 @@ Do NOT fall back to scanning `.jsonl` files or guessing by modification time.
 SessionStart hook fires
   → reads session_id, transcript_path, cwd from hook stdin JSON
   → reads WT_SESSION from env
-  → writes P:\\\\\\.claude/.artifacts/{terminal_id}/identity.json
+  → writes P://.claude/.artifacts/{terminal_id}/identity.json
 
 /id skill fires
   → reads WT_SESSION from env

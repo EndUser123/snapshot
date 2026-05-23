@@ -1,6 +1,6 @@
 # GitHub-Ready Completion Report: handoff
 
-**Package**: P:\\\\\\packages/handoff
+**Package**: P://packages/handoff
 **Status**: ✅ READY FOR GITHUB
 **Date**: 2026-03-15
 
@@ -114,8 +114,8 @@ pytest tests/ -v  # All tests collected and running
 Hook symlinks are correct and pointing to the right location:
 
 ```bash
-P:\\\\\\.claude/hooks/PreCompact_handoff_capture.py → scripts/hooks/PreCompact_handoff_capture.py ✅
-P:\\\\\\.claude/hooks/SessionStart_handoff_restore.py → scripts/hooks/SessionStart_handoff_restore.py ✅
+P://.claude/hooks/PreCompact_handoff_capture.py → scripts/hooks/PreCompact_handoff_capture.py ✅
+P://.claude/hooks/SessionStart_handoff_restore.py → scripts/hooks/SessionStart_handoff_restore.py ✅
 ```
 
 ---
@@ -146,7 +146,7 @@ The handoff package is now **fully GitHub-ready** with:
 - ✅ Complete documentation
 - ✅ Portfolio polish complete
 
-**Ready to publish** via `/plugin P:\\\\\\packages/handoff` or GitHub release.
+**Ready to publish** via `/plugin P://packages/handoff` or GitHub release.
 
 ---
 
@@ -157,13 +157,13 @@ The handoff package is now **fully GitHub-ready** with:
 **For Development** (current setup):
 ```powershell
 # Symlinks already in place
-P:\\\\\\.claude/hooks/PreCompact_handoff_capture.py ✅
-P:\\\\\\.claude/hooks/SessionStart_handoff_restore.py ✅
+P://.claude/hooks/PreCompact_handoff_capture.py ✅
+P://.claude/hooks/SessionStart_handoff_restore.py ✅
 ```
 
 **For End Users**:
 ```bash
-/plugin P:\\\\\\packages/handoff
+/plugin P://packages/handoff
 ```
 
 ---

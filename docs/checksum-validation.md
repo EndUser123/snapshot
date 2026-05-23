@@ -17,7 +17,7 @@ The checksum validation and restore policy enforcement mechanisms in the Handoff
 
 ### 1. SHA256 Checksum Calculation ✅
 
-**Location**: `P:\\\\\\packages/handoff/core/hooks/__lib/handoff_v2.py:92-96`
+**Location**: `P://packages/handoff/core/hooks/__lib/handoff_v2.py:92-96`
 
 ```python
 def compute_checksum(payload: dict[str, Any]) -> str:
@@ -39,7 +39,7 @@ def compute_checksum(payload: dict[str, Any]) -> str:
 
 ### 2. Checksum Normalization ✅
 
-**Location**: `P:\\\\\\packages/handoff/core/hooks/__lib/handoff_v2.py:80-89`
+**Location**: `P://packages/handoff/core/hooks/__lib/handoff_v2.py:80-89`
 
 ```python
 def _normalize_for_checksum(payload: dict[str, Any]) -> dict[str, Any]:
@@ -64,7 +64,7 @@ def _normalize_for_checksum(payload: dict[str, Any]) -> dict[str, Any]:
 
 ### 3. Checksum Validation ✅
 
-**Location**: `P:\\\\\\packages/handoff/core/hooks/__lib/handoff_v2.py:215-217`
+**Location**: `P://packages/handoff/core/hooks/__lib/handoff_v2.py:215-217`
 
 ```python
 checksum = payload.get("checksum")
@@ -78,7 +78,7 @@ if checksum is not None and checksum != compute_checksum(payload):
 
 ### 4. Status Values ✅
 
-**Location**: `P:\\\\\\packages/handoff/core/hooks/__lib/handoff_v2.py:18-27`
+**Location**: `P://packages/handoff/core/hooks/__lib/handoff_v2.py:18-27`
 
 Valid statuses (lines 22-27):
 - `pending` - Available for restore
@@ -98,7 +98,7 @@ if snapshot["status"] not in VALID_SNAPSHOT_STATUSES:
 
 ### 5. Restore Policy Enforcement ✅
 
-**Location**: `P:\\\\\\packages/handoff/core/hooks/__lib/handoff_v2.py:309-340`
+**Location**: `P://packages/handoff/core/hooks/__lib/handoff_v2.py:309-340`
 
 **Policy Requirements Verified**:
 1. ✅ Source must be "compact" (line 322-323)
@@ -121,7 +121,7 @@ if snapshot["status"] not in VALID_SNAPSHOT_STATUSES:
 
 ### 6. Terminal Isolation ✅
 
-**Location**: `P:\\\\\\packages/handoff/core/hooks/__lib/handoff_files.py:30-31`
+**Location**: `P://packages/handoff/core/hooks/__lib/handoff_files.py:30-31`
 
 ```python
 self.handoff_dir = project_root / ".claude" / "state" / "handoff"
@@ -138,7 +138,7 @@ self.handoff_file = self.handoff_dir / f"{terminal_id}_handoff.json"
 
 ### 7. Evidence Freshness Verification ✅
 
-**Location**: `P:\\\\\\packages/handoff/core/hooks/__lib/handoff_v2.py:343-362`
+**Location**: `P://packages/handoff/core/hooks/__lib/handoff_v2.py:343-362`
 
 ```python
 def verify_evidence_freshness(payload: dict[str, Any]) -> str | None:
@@ -168,7 +168,7 @@ def compute_file_content_hash(path: str | Path) -> str | None:
 
 ### 8. Status Transition Logic ✅
 
-**Location**: `P:\\\\\\packages/handoff/core/hooks/__lib/handoff_v2.py:278-306`
+**Location**: `P://packages/handoff/core/hooks/__lib/handoff_v2.py:278-306`
 
 **Valid Transitions**:
 - `pending` → `consumed` (on successful restore)
@@ -187,7 +187,7 @@ else:
 
 ### 9. Restore Hook Integration ✅
 
-**Location**: `P:\\\\\\packages/handoff/core/hooks/SessionStart_handoff_restore.py:125-169`
+**Location**: `P://packages/handoff/core/hooks/SessionStart_handoff_restore.py:125-169`
 
 **Flow**:
 1. Loads handoff file (line 111)

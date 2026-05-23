@@ -4,7 +4,7 @@
 
 Handoff now uses a single V2 envelope persisted at:
 
-`P:\\\\\\.claude/state/handoff/{terminal_id}_handoff.json`
+`P://.claude/state/handoff/{terminal_id}_handoff.json`
 
 The envelope contains:
 
@@ -139,7 +139,7 @@ The active V2 path does not use:
 
 Implementation files:
 
-- [`PreCompact_handoff_capture.py`](/P:\\\\\\packages/handoff/core/hooks/PreCompact_handoff_capture.py)
-- [`SessionStart_handoff_restore.py`](/P:\\\\\\packages/handoff/core/hooks/SessionStart_handoff_restore.py)
-- [`handoff_v2.py`](/P:\\\\\\packages/handoff/core/hooks/__lib/handoff_v2.py)
-- [`handoff_files.py`](/P:\\\\\\packages/handoff/core/hooks/__lib/handoff_files.py)
+- [`PreCompact_handoff_capture.py`](/P://packages/handoff/core/hooks/PreCompact_handoff_capture.py)
+- [`SessionStart_handoff_restore.py`](/P://packages/handoff/core/hooks/SessionStart_handoff_restore.py)
+- [`handoff_v2.py`](/P://packages/handoff/core/hooks/__lib/handoff_v2.py)
+- [`handoff_files.py`](/P://packages/handoff/core/hooks/__lib/handoff_files.py)

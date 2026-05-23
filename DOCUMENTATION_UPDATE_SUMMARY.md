@@ -31,8 +31,8 @@
 - New: `from __lib.transcript import ...` (with proper sys.path setup)
 
 **Symlink Path Corrections**:
-- Old: `P:\\\\\\packages\handoff\core\hooks\PreCompact_handoff_capture.py`
-- New: `P:\\\\\\packages\handoff\scripts\hooks\PreCompact_handoff_capture.py`
+- Old: `P://packages/handoff/core/hooks/PreCompact_handoff_capture.py`
+- New: `P://packages/handoff/scripts/hooks/PreCompact_handoff_capture.py`
 
 **Directory Structure**:
 - Old: `core/hooks/__lib/`
@@ -51,20 +51,20 @@ All documentation now accurately reflects:
 
 ### For Development
 ```powershell
-cd P:\\\\\\.claude/hooks
-cmd /c "mklink PreCompact_handoff_capture.py P:\\\\\\packages\handoff\scripts\hooks\PreCompact_handoff_capture.py"
-cmd /c "mklink SessionStart_handoff_restore.py P:\\\\\\packages\handoff\scripts\hooks\SessionStart_handoff_restore.py"
+cd P://.claude/hooks
+cmd /c "mklink PreCompact_handoff_capture.py P://packages/handoff/scripts/hooks/PreCompact_handoff_capture.py"
+cmd /c "mklink SessionStart_handoff_restore.py P://packages/handoff/scripts/hooks/SessionStart_handoff_restore.py"
 ```
 
 ### For End Users
 ```bash
-/plugin P:\\\\\\packages/handoff
+/plugin P://packages/handoff
 ```
 
 ## Test Verification
 
 ```bash
-pytest P:\\\\\\packages/handoff/tests/ -v
+pytest P://packages/handoff/tests/ -v
 # Result: 103 tests collected, 102 passing
 ```
 

@@ -1,7 +1,7 @@
 # Review Bundle: handoff Package
 
 **Generated**: 2026-03-08T16:45:00+00:00
-**Scope**: P:\\\\\\packages\handoff
+**Scope**: P://packages/handoff
 **File Count**: 44 source files (excluding cache/build artifacts)
 **Execution Mode**: Single agent (< 10 files threshold for overhead)
 
@@ -12,7 +12,7 @@
 ### Bundle Metadata
 
 - **Generated**: 2026-03-08 16:45:00 UTC
-- **Scope**: P:\\\\\\packages\handoff
+- **Scope**: P://packages/handoff
 - **File Count**: 44 source files
 - **Execution Mode**: Single agent
 - **Version**: 0.5.0
@@ -407,11 +407,11 @@
 - Hooks output via stdout (JSON for SessionStart, nothing for PreCompact)
 
 **Dependencies**:
-- Handoff package must be in `sys.path` (hardcoded to `P:\\\\\\packages/handoff/src`)
+- Handoff package must be in `sys.path` (hardcoded to `P://packages/handoff/src`)
 - Claude Code settings.json must register hooks
 
 **Known limitations**:
-- Hardcoded package path (`P:\\\\\\packages/handoff/src`) - not portable
+- Hardcoded package path (`P://packages/handoff/src`) - not portable
 - No fallback if package not found (ImportError)
 - No version checking (could break with future Claude Code changes)
 
@@ -553,23 +553,23 @@ if transcript:
 
 #### Issue #2: Hardcoded Package Path
 
-**Scenario**: Handoff package path is hardcoded to `P:\\\\\\packages/handoff/src` in hooks
+**Scenario**: Handoff package path is hardcoded to `P://packages/handoff/src` in hooks
 
 **Expected vs Actual**:
 - **Expected**: Hooks should work regardless of package installation location
-- **Actual**: Hooks fail if package not at `P:\\\\\\packages/handoff/src`
+- **Actual**: Hooks fail if package not at `P://packages/handoff/src`
 
 **Root Cause**: Hooks insert hardcoded path into sys.path:
 
 ```python
-HANDOFF_PACKAGE = Path("P:\\\\\\packages/handoff/src")
+HANDOFF_PACKAGE = Path("P://packages/handoff/src")
 if HANDOFF_PACKAGE.exists() and str(HANDOFF_PACKAGE) not in sys.path:
     sys.path.insert(0, str(HANDOFF_PACKAGE))
 ```
 
 **Impact**: MEDIUM - Limits portability, breaks in different environments
 
-**Current workaround**: None (must use `P:\\\\\\packages/handoff` or modify hooks)
+**Current workaround**: None (must use `P://packages/handoff` or modify hooks)
 
 **Proposed fix**: Use relative imports or package installation path discovery
 
@@ -796,7 +796,7 @@ Step 2: SessionStart called with terminal_id="test-op-verify"
    **Session Type:** 📋 planning
    **Progress:** 50%
    **Next Action:** Analyze next step hook usage patterns
-   **Transcript:** P:\\\\\\transcripts/session_abc123.jsonl
+   **Transcript:** P://transcripts/session_abc123.jsonl
 
 Restoration quality: 6/6
 ✅ SUCCESS: Handoff system works correctly!
@@ -858,11 +858,11 @@ Step 2: Falling back to search for most recent handoff...
 [2026-03-08 10:39:39] [HandoffStore] Computing checksum...
 [2026-03-08 10:39:39] [HandoffStore] Checksum: sha256:a3f5e8b2c1d4f7a9e0b6c3d8f1a2b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2
 [2026-03-08 10:39:39] [HandoffStore] Writing handoff to task tracker...
-[2026-03-08 10:39:39] [HandoffStore] Handoff saved to P:\\\\\\.claude/state/task_tracker/fallback_1_tasks.json
+[2026-03-08 10:39:39] [HandoffStore] Handoff saved to P://.claude/state/task_tracker/fallback_1_tasks.json
 [2026-03-08 10:39:39] [PreCompact] Handoff capture complete.
 ```
 
-**File**: `P:\\\\\\.claude/state/task_tracker/fallback_1_tasks.json`
+**File**: `P://.claude/state/task_tracker/fallback_1_tasks.json`
 
 ---
 
@@ -897,7 +897,7 @@ Step 2: Falling back to search for most recent handoff...
 **Session Type:** 📋 planning
 **Progress:** 50%
 **Next Action:** Analyze next step hook usage patterns
-**Transcript:** P:\\\\\\transcripts/session_abc123.jsonl
+**Transcript:** P://transcripts/session_abc123.jsonl
 
 ---
 

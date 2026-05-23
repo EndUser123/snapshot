@@ -413,10 +413,12 @@ def _extract_slash_command_goal(
 
     Returns None when raw_last_user is not a slash command.
     """
+    # Only match against the first line — SKILL.md content follows on
+    # subsequent lines and must not be captured as command args.
+    first_line = (raw_last_user or "").strip().split("\n", 1)[0]
     match = re.match(
         r"^(/[a-z][a-z0-9_-]*(?::[a-z][a-z0-9_-]+)?)(\s+(.+))?$",
-        (raw_last_user or "").strip(),
-        re.DOTALL,
+        first_line,
     )
     if not match:
         return None
@@ -713,10 +715,13 @@ def run(input_data: dict[str, Any]) -> dict[str, Any]:
         # Extract raw last user message first (before any filtering)
         raw_last_user = parser.extract_last_user_message()
 
-        # Only use raw_last_user if it's NOT a slash command invocation —
-        # slash commands go through transcript-based extraction which properly
-        # skips meta-instructions and filters to the actual user goal.
-        # raw_last_user can contain SKILL.md content that contaminated goal.
+        # Save original before possible nulling — needed for slash command extraction.
+        # raw_last_user can contain SKILL.md content appended after the /command,
+        # so we null it to avoid contaminating goal with skill definitions.
+        # But _extract_slash_command_goal only extracts the command part via regex,
+        # so passing the full message is safe.
+        original_user_message = raw_last_user
+
         slash_match = re.match(
             r"^/[a-z][a-z0-9_-]*(?::[a-z][a-z0-9_-]+)?(?:\s+|--?\s)",
             (raw_last_user or "").strip(),
@@ -738,7 +743,7 @@ def run(input_data: dict[str, Any]) -> dict[str, Any]:
                 len(goal) if goal else 0,
             )
         else:
-            slash_result = _extract_slash_command_goal(None, active_files)
+            slash_result = _extract_slash_command_goal(original_user_message, active_files)
             if slash_result:
                 goal, goal_origin = slash_result
                 message_intent = "instruction"
@@ -955,9 +960,7 @@ def run(input_data: dict[str, Any]) -> dict[str, Any]:
             "additionalContext": (
                 f"Saved V2 handoff snapshot.\n"
                 f"Goal: {goal}\n"
-                f"Next Step: {next_step}\n"
-                f"Active Files: {len(active_files)}\n"
-                f"Pending Operations: {len(pending_operations)}"
+                f"Next Step: {next_step}"
             ),
         }
     except HookInputError as exc:

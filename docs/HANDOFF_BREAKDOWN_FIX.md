@@ -4,8 +4,8 @@
 
 This document is historical analysis only. The live handoff system is Handoff V2 in:
 
-- `P:\\\\\\packages/handoff/core/hooks/PreCompact_handoff_capture.py`
-- `P:\\\\\\packages/handoff/core/hooks/SessionStart_handoff_restore.py`
+- `P://packages/handoff/core/hooks/PreCompact_handoff_capture.py`
+- `P://packages/handoff/core/hooks/SessionStart_handoff_restore.py`
 
 The active storage format is a single per-terminal V2 envelope with:
 
@@ -16,9 +16,9 @@ The active storage format is a single per-terminal V2 envelope with:
 
 Do not use this document as the current restore contract. The authoritative contract is documented in:
 
-- `P:\\\\\\packages/handoff/README.md`
-- `P:\\\\\\packages/handoff/docs/HANDOFF_DATA_STRUCTURE_FIX.md`
-- `P:\\\\\\packages/handoff/docs/HANDOFF_FIELD_NAMES.md`
+- `P://packages/handoff/README.md`
+- `P://packages/handoff/docs/HANDOFF_DATA_STRUCTURE_FIX.md`
+- `P://packages/handoff/docs/HANDOFF_FIELD_NAMES.md`
 
 ## What Failed In The Old System
 
@@ -48,7 +48,7 @@ V2 replaces that with a smaller, deterministic system:
 
 PreCompact writes one envelope to:
 
-- `P:\\\\\\.claude/state/handoff/{terminal_id}_handoff.json`
+- `P://.claude/state/handoff/{terminal_id}_handoff.json`
 
 SessionStart restores only when all of the following are true:
 

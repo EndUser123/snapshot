@@ -18,12 +18,12 @@ cd P/packages/handoff
 
 # 2. For local development (recommended)
 # Create junctions for hook files
-cd P:\\\\\\.claude/hooks
-cmd /c "mklink PreCompact_handoff_capture.py P:\\\\\\packages\handoff\core\hooks\PreCompact_handoff_capture.py"
-cmd /c "mklink SessionStart_handoff_restore.py P:\\\\\\packages\handoff\core\hooks\SessionStart_handoff_restore.py"
+cd P://.claude/hooks
+cmd /c "mklink PreCompact_handoff_capture.py P://packages/handoff/core/hooks/PreCompact_handoff_capture.py"
+cmd /c "mklink SessionStart_handoff_restore.py P://packages/handoff/core/hooks/SessionStart_handoff_restore.py"
 
 # 3. Verify installation
-pytest P:\\\\\\packages/handoff/tests/ -q
+pytest P://packages/handoff/tests/ -q
 ```
 
 **What it does**: Captures terminal state before transcript compaction and restores it on session start, preserving your work context across compactions and multi-terminal workflows.
@@ -96,16 +96,16 @@ Automatic restore is allowed only when all of the following are true:
 
 **Setup**:
 ```powershell
-# Symlink individual hook files to P:\\\\\\.claude/hooks/
-cd P:\\\\\\.claude/hooks
+# Symlink individual hook files to P://.claude/hooks/
+cd P://.claude/hooks
 
 # Symlink the two main hook files
-cmd /c "mklink PreCompact_handoff_capture.py P:\\\\\\packages/handoff/scripts/hooks/PreCompact_handoff_capture.py"
-cmd /c "mklink SessionStart_handoff_restore.py P:\\\\\\packages/handoff/scripts/hooks/SessionStart_handoff_restore.py"
+cmd /c "mklink PreCompact_handoff_capture.py P://packages/handoff/scripts/hooks/PreCompact_handoff_capture.py"
+cmd /c "mklink SessionStart_handoff_restore.py P://packages/handoff/scripts/hooks/SessionStart_handoff_restore.py"
 ```
 
 **Key points**:
-- ✅ Edit in `P:\\\\\\packages/handoff/`, changes work immediately
+- ✅ Edit in `P://packages/handoff/`, changes work immediately
 - ✅ No reinstallation required - symlinks auto-load
 - ✅ Perfect for active development
 - ⚠️ **CRITICAL**: After migration to scripts/, check for broken symlinks pointing to old `core/` paths
@@ -117,7 +117,7 @@ cmd /c "mklink SessionStart_handoff_restore.py P:\\\\\\packages/handoff/scripts/
 **Setup**:
 ```bash
 # End users install via /plugin command
-/plugin P:\\\\\\packages/handoff
+/plugin P://packages/handoff
 
 # Or from marketplace (when published)
 /plugin install handoff
@@ -142,12 +142,12 @@ Run tests to verify installation:
 
 ```bash
 # Quick test
-pytest P:\\\\\\packages/handoff/tests/ -q
+pytest P://packages/handoff/tests/ -q
 
 # Comprehensive test
-pytest P:\\\\\\packages/handoff/scripts/tests/test_handoff_hooks.py -q
-pytest P:\\\\\\packages/handoff/tests/test_canonical_goal_extraction.py -q
-pytest P:\\\\\\packages/handoff/tests/test_pending_operations_extraction.py -q
+pytest P://packages/handoff/scripts/tests/test_handoff_hooks.py -q
+pytest P://packages/handoff/tests/test_canonical_goal_extraction.py -q
+pytest P://packages/handoff/tests/test_pending_operations_extraction.py -q
 ```
 
 **Expected output**: All 103 tests pass.

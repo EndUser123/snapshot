@@ -60,7 +60,7 @@ Full template for generating session handover documents.
 **Insight**: Session continuity requires decision preservation (pattern)
 
 ## Next Immediate Action
-1. Review research document at `P:\\\\\\docs/research/coding-mistake-prevention-research.md`
+1. Review research document at `P://docs/research/coding-mistake-prevention-research.md`
 2. Test auto-skill with "debug this" prompt
 3. Decide on build verification priority
 

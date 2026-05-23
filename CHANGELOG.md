@@ -106,21 +106,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Reason**: Official plugin-dev:plugin-structure specification does not include `core/` directory
   - **New location**: All Python code now in `scripts/` directory
   - **Hooks updated**: `hooks/hooks.json` now references `$CLAUDE_PLUGIN_ROOT/scripts/hooks/` instead of `$CLAUDE_PLUGIN_ROOT/core/hooks/`
-  - **Hook symlinks updated**: Development symlinks in `P:\\\\\\.claude/hooks/` updated to point to `scripts/`
+  - **Hook symlinks updated**: Development symlinks in `P://.claude/hooks/` updated to point to `scripts/`
   - **Removed**: Obsolete `skill/` directory (legacy standalone skill structure)
   - **Added**: `.ruff_cache/` and `.benchmarks/` to `.gitignore`
 
 ### Migration Guide
 If you have local development symlinks to `core/`, update them:
 ```powershell
-cd P:\\\\\\.claude/hooks
+cd P://.claude/hooks
 # Old paths (no longer work)
-# P:\\\\\\packages/handoff/core/hooks/PreCompact_handoff_capture.py
-# P:\\\\\\packages/handoff/core/hooks/SessionStart_handoff_restore.py
+# P://packages/handoff/core/hooks/PreCompact_handoff_capture.py
+# P://packages/handoff/core/hooks/SessionStart_handoff_restore.py
 
 # New paths (current)
-P:\\\\\\packages/handoff/scripts/hooks/PreCompact_handoff_capture.py
-P:\\\\\\packages/handoff/scripts/hooks/SessionStart_handoff_restore.py
+P://packages/handoff/scripts/hooks/PreCompact_handoff_capture.py
+P://packages/handoff/scripts/hooks/SessionStart_handoff_restore.py
 ```
 
 ### Technical Details

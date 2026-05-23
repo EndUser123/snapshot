@@ -279,7 +279,7 @@ Immediate Next Action
 
 **All Tests Passing:**
 ```bash
-cd P:\\\\\\packages/handoff
+cd P://packages/handoff
 python -m pytest tests/test_do_not_revisit.py -v
 # Result: 16 passed in 0.15s
 
@@ -325,7 +325,7 @@ python -m pytest tests/test_handoff_integration.py -v
 - ✅ Test coverage > 80%
 
 **Plan Reference:**
-- Plan: `P:\\\\\\.claude/hooks/plans/plan-handoff-refinements-20260308.md`
+- Plan: `P://.claude/hooks/plans/plan-handoff-refinements-20260308.md`
 - Phase: 1 of 4
 - Section: "Phase 1: do_not_revisit Separation" (lines 59-95)
 

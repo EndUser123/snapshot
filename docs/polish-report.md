@@ -15,7 +15,7 @@ The handoff package has been successfully polished for GitHub/public portfolio d
 ## Fixes Applied
 
 ### 1. Hardcoded Path Removal (CRITICAL)
-**Severity**: High - Prevented package from working on systems other than P:\\\\\\ drive
+**Severity**: High - Prevented package from working on systems other than P:// drive
 
 **Files Modified**:
 - `src/handoff/hooks/PreCompact_handoff_capture.py`
@@ -25,8 +25,8 @@ The handoff package has been successfully polished for GitHub/public portfolio d
 **Changes**:
 ```python
 # BEFORE: Windows-specific hardcoded path
-HANDOFF_PACKAGE = Path("P:\\\\\\packages/handoff/src")
-project_root = Path("P:\\\\\\")
+HANDOFF_PACKAGE = Path("P://packages/handoff/src")
+project_root = Path("P://")
 
 # AFTER: Portable relative path resolution
 HANDOFF_PACKAGE = Path(__file__).parent.parent.parent

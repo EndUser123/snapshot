@@ -876,6 +876,28 @@ def run(input_data: dict[str, Any]) -> dict[str, Any]:
         active_skill = _extract_active_skill(raw_last_user or "")
         recent_corrections = _extract_recent_corrections(goal, active_files)
 
+        # Capture prompt-enhancer artifact if present
+        prompt_enhancement: dict[str, Any] | None = None
+        try:
+            from scripts.hooks.__lib.snapshot_v2 import VALID_ENHANCEMENT_FIELDS
+            enhancement_path = (
+                Path.home() / ".claude" / ".artifacts" / terminal_id / "prompt-enhancer" / "active_enhancement.json"
+            )
+            if enhancement_path.exists():
+                with open(enhancement_path, encoding="utf-8") as f:
+                    enhancement_data = json.load(f)
+                # Validate and filter to allowed fields only
+                prompt_enhancement = {
+                    k: v for k, v in enhancement_data.items()
+                    if k in VALID_ENHANCEMENT_FIELDS
+                }
+                logger.info(
+                    "[PreCompact V2] Captured prompt_enhancement: %d fields",
+                    len(prompt_enhancement),
+                )
+        except Exception as exc:
+            logger.debug("[PreCompact V2] Prompt enhancement capture failed: %s", exc)
+
         resume_snapshot = build_resume_snapshot(
             terminal_id=terminal_id,
             source_session_id=input_data.get("session_id", ""),
@@ -900,6 +922,7 @@ def run(input_data: dict[str, Any]) -> dict[str, Any]:
             last_user_message=raw_last_user,
             recent_corrections=recent_corrections,
             transcript_chain=transcript_chain,
+            prompt_enhancement=prompt_enhancement,
         )
         envelope = build_envelope(
             resume_snapshot=resume_snapshot,

@@ -54,11 +54,21 @@ VALID_MESSAGE_INTENTS = {
     "unsupported_language",
     "directive",  # Added for imperative commands (detect_message_intent returns this)
 }
+VALID_ENHANCEMENT_FIELDS = {
+    "clarified_intent",
+    "missing_details",
+    "safety_flags",
+    "estimated_tokens",
+    "inferred_subject",
+    "confidence",
+    "analysis",
+}  # Valid EnhancementResult fields from prompt-enhancer
 OPTIONAL_DECISION_FIELDS = set()  # Optional fields allowed in decisions
 OPTIONAL_SNAPSHOT_FIELDS = {
     "quality_score",
     SNAPSHOT_OPEN_QUESTIONS,
     SNAPSHOT_TASKS_SNAPSHOT,
+    "prompt_enhancement",  # EnhancementResult from prompt-enhancer plugin
 }  # Optional fields allowed in snapshot
 MUTABLE_METADATA_FIELDS = {
     "consumed_at",
@@ -596,6 +606,7 @@ def build_resume_snapshot(
     last_user_message: str | None = None,  # Verbatim last user message (ADR-006)
     recent_corrections: list[str] | None = None,  # MEMORY.md corrections ranked by relevance
     transcript_chain: list[str] | None = None,  # Pre-computed ordered list of transcript paths (newest first)
+    prompt_enhancement: dict[str, Any] | None = None,  # EnhancementResult from prompt-enhancer plugin
 ) -> dict[str, Any]:
     """Build the V2 resume snapshot."""
     # QUAL-005: Validate message_intent is a recognized value
@@ -646,6 +657,8 @@ def build_resume_snapshot(
         snapshot["recent_corrections"] = recent_corrections
     if transcript_chain is not None:
         snapshot["transcript_chain"] = transcript_chain
+    if prompt_enhancement is not None:
+        snapshot["prompt_enhancement"] = prompt_enhancement
     return snapshot
 
 
@@ -732,6 +745,19 @@ def evaluate_for_restore(
     snapshot = payload["resume_snapshot"]
     if snapshot["terminal_id"] != terminal_id:
         return RestoreDecision(ok=False, reason="terminal mismatch")
+
+    # Reject if current session already appears in session_chain.
+    # This prevents cross-session contamination: a handoff captured in session A
+    # must not be restored by session B (even though B is in the same terminal).
+    # session_chain is checksummed (immutable field), so this cannot be bypassed.
+    session_chain = snapshot.get("session_chain", [])
+    if session_chain:
+        current_session = os.environ.get("CLAUDE_SESSION_ID", "")
+        if current_session and current_session in session_chain:
+            return RestoreDecision(
+                ok=False,
+                reason="snapshot already restored in this terminal's session chain",
+            )
 
     if snapshot["status"] != SNAPSHOT_PENDING:
         return RestoreDecision(

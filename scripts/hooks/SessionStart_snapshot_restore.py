@@ -229,6 +229,28 @@ def run(input_data: dict[str, Any]) -> dict[str, Any]:
                 for corr in recent_corrections[:3]:
                     restoration_message += f"\n- {corr}"
 
+            # Restore prompt-enhancer artifact if present
+            prompt_enhancement = snapshot.get("prompt_enhancement")
+            if prompt_enhancement and isinstance(prompt_enhancement, dict):
+                try:
+                    enhancement_dir = (
+                        Path.home() / ".claude" / ".artifacts" / terminal_id / "prompt-enhancer"
+                    )
+                    enhancement_dir.mkdir(parents=True, exist_ok=True)
+                    enhancement_file = enhancement_dir / "active_enhancement.json"
+                    # Add current session_id to enhancement data
+                    enhancement_data = {**prompt_enhancement, "session_id": session_id}
+                    enhancement_file.write_text(
+                        json.dumps(enhancement_data, indent=2), encoding="utf-8"
+                    )
+                    logger.info(
+                        "[SessionStart V2] Restored prompt_enhancement with %d fields",
+                        len(prompt_enhancement),
+                    )
+                    restoration_message += "\n\n**Prompt clarification restored** from previous session."
+                except Exception as exc:
+                    logger.warning("[SessionStart V2] Failed to restore prompt_enhancement: %s", exc)
+
             try:
                 env_ctx = restore_decision.envelope.get("environment_context")
                 if env_ctx and isinstance(env_ctx, dict):

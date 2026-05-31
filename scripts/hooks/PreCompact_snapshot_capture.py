@@ -19,8 +19,9 @@ logger = logging.getLogger(__name__)
 
 # Configure logging to ensure diagnostic output is captured
 # Logs will be written to P:\\\\\\.claude/.artifacts/snapshot/logs/handoff_capture.log
+_log_root = Path(os.environ.get("CLAUDE_PROJECT_DIR") or "P:/")
 _log_file_path = (
-    Path.cwd() / ".claude" / ".artifacts" / "snapshot" / "logs" / "handoff_capture.log"
+    _log_root / ".claude" / ".artifacts" / "snapshot" / "logs" / "handoff_capture.log"
 )
 _log_file_path.parent.mkdir(parents=True, exist_ok=True)
 _handler = RotatingFileHandler(
@@ -683,10 +684,20 @@ def run(input_data: dict[str, Any]) -> dict[str, Any]:
                 f"[PreCompact V2] Using project root from environment: {project_root}"
             )
         else:
-            project_root = _find_project_root(Path.cwd())
-            logger.info(
-                f"[PreCompact V2] Using project root from walk-up: {project_root}"
-            )
+            # CLAUDE_PROJECT_DIR is the authoritative, cwd-independent project
+            # root. Prefer it over walk-up: walk-up searches for a ".claude"
+            # dir and can latch onto a leaked one inside a package tree.
+            env_root = os.environ.get("CLAUDE_PROJECT_DIR")
+            if env_root:
+                project_root = Path(env_root)
+                logger.info(
+                    f"[PreCompact V2] Using project root from CLAUDE_PROJECT_DIR: {project_root}"
+                )
+            else:
+                project_root = _find_project_root(Path.cwd())
+                logger.info(
+                    f"[PreCompact V2] Using project root from walk-up: {project_root}"
+                )
 
         # CRITICAL: Validate transcript_path exists and is readable
         transcript_file = Path(transcript_path)

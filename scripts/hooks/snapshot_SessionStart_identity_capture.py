@@ -84,10 +84,12 @@ def run(data: dict) -> dict | None:
         return None
 
     cwd = data.get("cwd", "")
-    if cwd:
-        artifacts_root = Path(cwd) / ".claude" / ".artifacts"
-    else:
-        artifacts_root = Path("P:/.claude/.artifacts")
+    # Anchor artifacts to the project root, never to raw cwd: a script whose
+    # cwd is a nested package dir would otherwise leak .claude/.artifacts into
+    # the package tree. CLAUDE_PROJECT_DIR is the cwd-independent project root;
+    # fall back to the canonical workspace root (matches terminal_detection.py).
+    project_root = os.environ.get("CLAUDE_PROJECT_DIR") or "P:/"
+    artifacts_root = Path(project_root) / ".claude" / ".artifacts"
 
     identity = {
         "terminal": {

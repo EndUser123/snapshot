@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 # Configure logging to ensure diagnostic output is captured
 # Logs will be written to P:\\\\\\.claude/.artifacts/snapshot/logs/handoff_restore.log
 _log_file_path = (
-    Path.cwd() / ".claude" / ".artifacts" / "snapshot" / "logs" / "handoff_restore.log"
+    Path(os.environ.get("CLAUDE_PROJECT_DIR", "P:")) / ".claude" / ".artifacts" / "snapshot" / "logs" / "handoff_restore.log"
 )
 _log_file_path.parent.mkdir(parents=True, exist_ok=True)
 if not logger.handlers:
@@ -162,7 +162,7 @@ def run(input_data: dict[str, Any]) -> dict[str, Any]:
                 f"[SessionStart V2] Using project root from environment: {project_root}"
             )
         else:
-            project_root = detect_project_root(current_dir=Path.cwd(), strict=False)
+            project_root = detect_project_root(current_dir=Path(os.environ.get("CLAUDE_PROJECT_DIR", "P:")), strict=False)
             logger.info(
                 f"[SessionStart V2] Using project root from detect_project_root: {project_root}"
             )

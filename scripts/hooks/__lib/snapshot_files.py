@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 # Configure logging for snapshot file operations
 # Logs will be written to P:\\\\\\.claude/.artifacts/snapshot/logs/snapshot_files.log
 _log_file_path = (
-    Path.cwd() / ".claude" / ".artifacts" / "snapshot" / "logs" / "snapshot_files.log"
+    Path(os.environ.get("CLAUDE_PROJECT_DIR", "P:")) / ".claude" / ".artifacts" / "snapshot" / "logs" / "snapshot_files.log"
 )
 _log_file_path.parent.mkdir(parents=True, exist_ok=True)
 if not logger.handlers:

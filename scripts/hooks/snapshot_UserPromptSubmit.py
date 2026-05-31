@@ -117,7 +117,7 @@ def write_restore_smoke_marker(terminal_id: str, session_id: str) -> None:
     consumed by Claude Code.
     """
     try:
-        STATE_DIR.mkdir(parents=True, exist_ok=True)
+        _smoke_path(terminal_id).parent.mkdir(parents=True, exist_ok=True)
         payload = {
             "type": "restore_smoke",
             "terminal_id": terminal_id,

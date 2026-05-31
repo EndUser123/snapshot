@@ -7,7 +7,7 @@ Session snapshot and handoff system for Claude Code — ensures 100% work contin
 | Skill | Purpose | Home |
 |-------|---------|------|
 | /snapshot | Session snapshot capture and restore | `snapshot/` |
-| /track | Completion tracking and quality scoring | `track/` |
+|  | Completion tracking and quality scoring | `track/` |
 | /id | Session and terminal ID management | `id/` |
 
 ## Artifacts Convention

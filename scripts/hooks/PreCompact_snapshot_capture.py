@@ -53,7 +53,6 @@ from scripts.hooks.__lib.snapshot_v2 import (
     ensure_progress_state,
     make_decision_id,
     make_evidence_id,
-    short_task_name,
 )
 from scripts.hooks.__lib.dynamic_sections import calculate_quality_score_dynamic
 from scripts.hooks.__lib.project_root import detect_project_root
@@ -71,6 +70,7 @@ from scripts.hooks.__lib.transcript import (  # noqa: F401
     is_clarification_message,
     extract_preceding_message,
 )
+from scripts.hooks.__lib.user_intent import capture_pending_questions
 
 # Import local hooks utilities for MEMORY.md corrections ranking
 _local_utils_path = Path.home() / ".claude" / "projects" / "P--" / ".claude" / "hooks" / "utils"
@@ -773,7 +773,15 @@ def run(input_data: dict[str, Any]) -> dict[str, Any]:
                 goal = f"Skill /{skill_name_for_decision} invoked - analyzing results"
 
         pending_operations = _normalize_pending_operations(parser)
-        current_task = short_task_name(goal)
+
+        open_questions = None
+        try:
+            raw_transcript = Path(transcript_path).read_text(encoding="utf-8", errors="replace")
+            result = capture_pending_questions(raw_transcript)
+            if result:
+                open_questions = [{"question": q["question"], "category": q["category"]} for q in result.get("questions", [])[:5]]
+        except Exception:
+            pass
         planning_blocker = detect_planning_session(goal, active_files)
         blockers = [planning_blocker] if planning_blocker else []
         progress_percent = _estimate_progress(blockers, pending_operations, goal)
@@ -902,7 +910,7 @@ def run(input_data: dict[str, Any]) -> dict[str, Any]:
             terminal_id=terminal_id,
             source_session_id=input_data.get("session_id", ""),
             goal=goal,
-            current_task=current_task,
+            
             progress_percent=progress_percent,
             progress_state=progress_state,
             blockers=blockers,
@@ -916,6 +924,7 @@ def run(input_data: dict[str, Any]) -> dict[str, Any]:
             message_intent=message_intent,
             quality_score=quality_score,
             tasks_snapshot=tasks_snapshot,
+            open_questions=open_questions,
             goal_origin=goal_origin,
             active_skill=active_skill,
             session_chain=session_chain,

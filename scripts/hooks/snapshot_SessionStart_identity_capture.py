@@ -25,6 +25,40 @@ _REGISTRY_MAX_LINES = 10_000
 _REGISTRY_KEEP_LINES = 5_000
 
 
+
+def _append_to_session_registry(
+    terminal_id: str,
+    session_id: str,
+    transcript_path: str,
+    cwd: str,
+    artifacts_root: Path,
+) -> None:
+    """Append current session to session_registry.jsonl.
+
+    Makes the session immediately available for cross-terminal queries
+    (e.g., /chs export) instead of waiting for next compaction.
+    """
+    registry_path = artifacts_root / "session_registry.jsonl"
+    registry_path.parent.mkdir(parents=True, exist_ok=True)
+
+    entry = {
+        "ts": datetime.now(UTC).isoformat(),
+        "terminal_id": terminal_id,
+        "session_id": session_id,
+        "transcript_path": transcript_path,
+        "goal": "",
+        "progress_percent": 0,
+        "handoff_path": "",
+        "cwd": cwd,
+    }
+
+    try:
+        with registry_path.open("a", encoding="utf-8") as rf:
+            rf.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    except Exception:
+        pass  # Non-fatal: registry write failure shouldn't block SessionStart
+
+
 def _prune_session_registry(registry_path: Path) -> None:
     if not registry_path.exists():
         return
@@ -78,6 +112,14 @@ def run(data: dict) -> dict | None:
     if dest.exists():
         dest.unlink()
     tmp.replace(dest)
+
+    _append_to_session_registry(
+        terminal_id=terminal_id,
+        session_id=identity["claude"]["session_id"],
+        transcript_path=identity["claude"]["transcript_path"],
+        cwd=identity["claude"]["cwd"],
+        artifacts_root=artifacts_root,
+    )
 
     _prune_session_registry(artifacts_root / "session_registry.jsonl")
 

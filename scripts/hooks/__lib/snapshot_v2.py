@@ -290,7 +290,7 @@ def _build_restore_state(
         },
         "work_state": {
             "goal": f"{intent_prefix} {snapshot['goal']}",
-            "current_task": snapshot["current_task"],
+            "current_task": snapshot.get("goal") or "",  # canonical; short task name removed
             "progress_state": snapshot["progress_state"],
             "progress_percent": snapshot["progress_percent"],
             "next_step": snapshot["next_step"],
@@ -322,7 +322,7 @@ def _render_restore_state_lines(state: dict[str, Any]) -> list[str]:
         f"n_2_transcript_path: {state['transcript_chain']['n_2_transcript_path']}",
         "work_state:",
         f"goal: {state['work_state']['goal']}",
-        f"current_task: {state['work_state']['current_task']}",
+        # current_task removed (redundant with goal)
         f"progress_state: {state['work_state']['progress_state']}",
         f"progress_percent: {state['work_state']['progress_percent']}",
         f"next_step: {state['work_state']['next_step']}",
@@ -407,7 +407,6 @@ def validate_envelope(payload: dict[str, Any]) -> None:
             "expires_at",
             "status",
             "goal",
-            "current_task",
             "progress_percent",
             "progress_state",
             "blockers",
@@ -434,7 +433,6 @@ def validate_envelope(payload: dict[str, Any]) -> None:
 
     for field in [
         "goal",
-        "current_task",
         "next_step",
         "terminal_id",
         "source_session_id",
@@ -584,7 +582,6 @@ def build_resume_snapshot(
     terminal_id: str,
     source_session_id: str,
     goal: str,
-    current_task: str,
     progress_percent: int,
     progress_state: str,
     blockers: list[dict[str, Any]],
@@ -627,8 +624,7 @@ def build_resume_snapshot(
         "expires_at": expires.isoformat(),
         "status": SNAPSHOT_PENDING,
         "goal": goal,
-        "current_task": current_task,
-        "progress_percent": max(0, min(100, progress_percent)),
+                "progress_percent": max(0, min(100, progress_percent)),
         "progress_state": progress_state,
         "blockers": blockers,
         "active_files": active_files,

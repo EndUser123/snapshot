@@ -13,7 +13,7 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_REGISTRY_PATH = Path("P:\\\\\\.claude/.artifacts/session_registry.jsonl")
+DEFAULT_REGISTRY_PATH = Path("P:/.claude/.artifacts/session_registry.jsonl")
 
 
 def query_registry(

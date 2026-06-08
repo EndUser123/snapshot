@@ -21,14 +21,14 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 # Import child hooks
-import PreCompact_snapshot_capture as capture
 import PreCompact_commitment_tracker as commitments
+from scripts.hooks.__lib.capture_pipeline import capture_snapshot
 
 _log = logging.getLogger(__name__)
 
 # SEQUENCE of run() functions
 SEQUENCE = [
-    ("capture", capture.run),
+    ("capture", capture_snapshot),
     ("commitments", commitments.run),
 ]
 
@@ -71,11 +71,13 @@ def main():
                 warnings.append((name, result))
         except Exception as e:
             _log.error(f"PreCompact child hook '{name}' crashed: {e}", exc_info=True)
-            print(json.dumps({
-                "decision": "block", 
-                "reason": f"PreCompact: child hook '{name}' crashed: {e}"
+            warnings.append((name, {
+                "decision": "approve",
+                "reason": f"PreCompact child hook '{name}' failed but compaction continues: {e}",
+                "additionalContext": (
+                    f"Snapshot PreCompact child '{name}' failed but compaction continues: {e}"
+                ),
             }))
-            sys.exit(1)
 
     # Summarize results
     if warnings:

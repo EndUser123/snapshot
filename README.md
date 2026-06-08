@@ -7,6 +7,17 @@
 
 > Compact/resume continuity for Claude Code using a small, deterministic V2 handoff envelope.
 
+## Runtime Source Of Truth
+
+Hook activation for this plugin in this workspace is owned by
+`P:/.claude/settings.json` and the router entrypoints under `scripts/hooks/`.
+The plugin's `hooks/hooks.json` file is **not** the operational source of
+truth. See [`docs/router-runtime-contract.md`](docs/router-runtime-contract.md)
+for the live registration contract, the required `PreCompact` matcher, and
+the verification commands. The historical installation recipes further down
+this README refer to a pre-`.claude-marketplace/` package layout and are kept
+for context only; do not follow them as live activation steps.
+
 ## Quick Start
 
 **Installation** (3 minutes):

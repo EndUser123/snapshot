@@ -10,15 +10,15 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 # Import child hooks
-import SessionStart_snapshot_restore as restore
 import SessionStart_tldr as tldr
 import snapshot_SessionStart_identity_capture as identity_capture
+from scripts.hooks.__lib.restore_pipeline import restore_snapshot
 
 _log = logging.getLogger(__name__)
 
 # SEQUENCE of run() functions
 SEQUENCE = [
-    ("restore", restore.run),
+    ("restore", restore_snapshot),
     ("tldr", tldr.run),
     ("identity_capture", identity_capture.run),
 ]

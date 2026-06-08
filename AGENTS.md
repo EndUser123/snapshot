@@ -2,6 +2,16 @@
 
 > AI-maintainable documentation for the handoff package. This file provides context and constraints for AI assistants (Claude, Copilot, etc.) working on this codebase.
 
+## Runtime Source Of Truth
+
+Hook activation in this workspace is owned by `P:/.claude/settings.json` and
+the router entrypoints under `scripts/hooks/`. The plugin's `hooks/hooks.json`
+is **not** the operational source of truth for this package. Before
+changing behavior, run `python scripts/doctor.py` and inspect
+`scripts/hooks/snapshot_PreCompact.py`, `snapshot_SessionStart.py`, and
+`snapshot_UserPromptSubmit.py`. The full contract is documented in
+[`docs/router-runtime-contract.md`](docs/router-runtime-contract.md).
+
 ## Package Overview
 
 **handoff** is a Claude Code plugin that provides compact/resume continuity for Claude Code sessions. It captures terminal state before transcript compaction and restores it on session start.

@@ -1,13 +1,23 @@
 """Compaction Recovery — UserPromptSubmit hook.
 
 Detects mid-session compaction events via a short-lived marker file written by
-``PreCompact_handoff_capture.py`` immediately after saving the Handoff V2
+``PreCompact_snapshot_capture.py`` immediately after saving the Handoff V2
 envelope.  On the first user prompt after a compaction, this hook reads the
 envelope and injects restoration context automatically — no explicit "read the
 transcript" directive needed.
 
+Activation wiring (router-runtime-contract):
+    This file is NOT a router entrypoint. It is loaded as a UserPromptSubmit
+    module via the ``@register_hook("handoff_task_injector", priority=1.0)``
+    decorator below, which is then dispatched by the global UPS router in
+    ``P:/.claude/hooks/UserPromptSubmit_router.py`` via
+    ``UserPromptSubmit_modules/registry.py``. There is no entry in
+    ``P:/.claude/settings.json`` for UserPromptSubmit that points at this
+    script directly; the global router is the single activation path.
+    See ``docs/router-runtime-contract.md`` for the full contract.
+
 FLOW:
-    PreCompact (PreCompact_handoff_capture.py)
+    PreCompact (PreCompact_snapshot_capture.py)
         ↓ saves handoff envelope to state/handoff/{terminal_id}_handoff.json
         ↓ writes state/compaction_marker_{terminal_id}.json  <- NEW
     UserPromptSubmit (this hook)
@@ -215,7 +225,7 @@ def _build_recovery_message(envelope: dict) -> str:
 def handoff_task_injector_hook(context: HookContext) -> HookResult:
     """Inject Handoff V2 restoration context on the first prompt after compaction.
 
-    ``PreCompact_handoff_capture.py`` writes a compaction marker immediately
+    ``PreCompact_snapshot_capture.py`` writes a compaction marker immediately
     after saving the handoff envelope.  This hook detects that marker, loads
     the envelope, builds a restoration message, injects it once, then deletes
     the marker so subsequent prompts are unaffected.

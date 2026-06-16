@@ -27,7 +27,7 @@ def _write_transcript(path: Path, entries: list[dict]) -> None:
 def test_detect_session_type_prefers_planning_keywords():
     session_type, emoji = detect_session_type(
         "/arch design the compact handoff replacement",
-        ["P:\\\\\\packages/snapshot/scripts/hooks/PreCompact_snapshot_capture.py"],
+        ["P:\\\\\\packages/.claude-marketplace/plugins/snapshot/scripts/hooks/PreCompact_snapshot_capture.py"],
     )
 
     assert session_type == "planning"
@@ -62,7 +62,7 @@ def test_precompact_hook_writes_v2_envelope(tmp_path, monkeypatch):
                 "type": "tool_use",
                 "name": "Edit",
                 "input": {
-                    "file_path": "P:\\\\\\packages/snapshot/scripts/hooks/__lib/snapshot_v2.py",
+                    "file_path": "P:\\\\\\packages/.claude-marketplace/plugins/snapshot/scripts/hooks/__lib/snapshot_v2.py",
                     "old_string": "old code",
                     "new_string": "new code",
                 },
@@ -73,7 +73,7 @@ def test_precompact_hook_writes_v2_envelope(tmp_path, monkeypatch):
                     "content": [
                         {
                             "type": "text",
-                            "text": "Decision: never auto-restore stale snapshots. editing file P:\\\\\\packages/snapshot/scripts/hooks/__lib/snapshot_v2.py next.",
+                            "text": "Decision: never auto-restore stale snapshots. editing file P:\\\\\\packages/.claude-marketplace/plugins/snapshot/scripts/hooks/__lib/snapshot_v2.py next.",
                         }
                     ]
                 },
@@ -108,7 +108,7 @@ def test_precompact_hook_writes_v2_envelope(tmp_path, monkeypatch):
     assert snapshot["status"] == "pending"
     assert snapshot["goal"].startswith("Implement the handoff v2 restore path")
     assert (
-        "P:\\\\\\packages/snapshot/scripts/hooks/__lib/snapshot_v2.py"
+        "P:\\\\\\packages/.claude-marketplace/plugins/snapshot/scripts/hooks/__lib/snapshot_v2.py"
         in snapshot["active_files"]
     )
     assert snapshot["decision_refs"]

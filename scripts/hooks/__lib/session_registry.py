@@ -2,7 +2,7 @@
 """Session registry reader for handoff system.
 
 Provides a query interface to the append-only JSONL session registry
-written by PreCompact_handoff_capture.py.
+written by PreCompact_snapshot_capture.py.
 """
 
 from __future__ import annotations

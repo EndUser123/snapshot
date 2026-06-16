@@ -32,6 +32,35 @@ DISPATCH = {
 }
 
 
+def _emit_block(out: str, hook_name: str, child_stderr: str = "") -> None:
+    """Emit a block on both channels, then exit(2).
+
+    The harness surfaces ONLY stderr for exit-2 blocks; stdout JSON is ignored
+    by the harness UI. Without the stderr line the user sees a bare
+    "Blocked by hook" with no reason (see blocking_stderr_standard). We still
+    print the JSON to stdout for any downstream consumer / logging.
+    """
+    reason = ""
+    if out:
+        print(out)
+        try:
+            parsed = json.loads(out)
+            if isinstance(parsed, dict):
+                reason = str(parsed.get("reason") or parsed.get("systemMessage") or "").strip()
+        except json.JSONDecodeError:
+            reason = out.strip()
+    if not reason:
+        reason = child_stderr.strip() or f"Blocked by {hook_name}"
+        if not out:
+            print(json.dumps({"decision": "block", "reason": reason}))
+    msg = f"BLOCKED [{hook_name}]: {reason}\n"
+    try:
+        sys.stderr.write(msg)
+    except UnicodeEncodeError:
+        sys.stderr.buffer.write(msg.encode("utf-8", "replace"))
+    sys.exit(2)
+
+
 def main() -> None:
     if len(sys.argv) < 2:
         sys.exit(0)
@@ -61,21 +90,15 @@ def main() -> None:
 
             if result.returncode == 2:
                 out = result.stdout.decode(errors="replace").strip()
-                if out:
-                    print(out)
-                else:
-                    stderr_msg = result.stderr.decode(errors="replace").strip()
-                    reason = stderr_msg if stderr_msg else f"Blocked by {hook_name}"
-                    print(json.dumps({"decision": "block", "reason": reason}))
-                sys.exit(2)
+                child_stderr = result.stderr.decode(errors="replace")
+                _emit_block(out, hook_name, child_stderr)
 
             out = result.stdout.decode(errors="replace").strip()
             if out:
                 try:
                     parsed = json.loads(out)
                     if isinstance(parsed, dict) and parsed.get("decision") == "block":
-                        print(out)
-                        sys.exit(2)
+                        _emit_block(out, hook_name)
                 except json.JSONDecodeError:
                     pass
         except subprocess.TimeoutExpired:

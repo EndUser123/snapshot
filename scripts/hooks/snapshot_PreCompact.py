@@ -22,7 +22,7 @@ if str(_HOOKS_DIR) not in sys.path:
 
 # Import child hooks
 import PreCompact_commitment_tracker as commitments
-from scripts.hooks.__lib.capture_pipeline import capture_snapshot
+from __lib.capture_pipeline import capture_snapshot
 
 _log = logging.getLogger(__name__)
 

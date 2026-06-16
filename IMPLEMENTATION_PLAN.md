@@ -1,6 +1,6 @@
 # Implementation Plan: snapshot Package
 
-**Package**: `P://packages/snapshot` — Session snapshot capture/restore for Claude Code  
+**Package**: `P://packages/.claude-marketplace/plugins/snapshot` — Session snapshot capture/restore for Claude Code  
 **Current Version**: 0.5.0  
 **Test Status**: 358 passed, 29 skipped, 14 warnings  
 **Last Commit**: `6338428` — 2026-05-02  
@@ -74,7 +74,7 @@ A Claude Code plugin (forked from `handoff`) that captures terminal session stat
 
 ### Validation
 ```bash
-pytest P://packages/snapshot/tests/ P://packages/snapshot/scripts/tests/ -q
+pytest P://packages/.claude-marketplace/plugins/snapshot/tests/ P://packages/.claude-marketplace/plugins/snapshot/scripts/tests/ -q
 # Expect: 358 passed, 29 skipped, 0 warnings
 grep -r "handoff" scripts/hooks/ scripts/config.py scripts/cli.py | wc -l
 # Expect: 0 (or near-zero, only in comments explaining fork history)
@@ -135,7 +135,7 @@ jobs:
 #### 3.1 Rewrite AGENTS.md for snapshot
 - [ ] Package overview: snapshot, not handoff
 - [ ] Directory structure: `scripts/` as authoritative, `core/` as redirect layer
-- [ ] Update all path references (`P://packages/snapshot/...`)
+- [ ] Update all path references (`P://packages/.claude-marketplace/plugins/snapshot/...`)
 - [ ] Update test count (358 passed, not 103)
 - [ ] Remove handoff-specific terminology
 - [ ] Document the fork relationship (snapshot forked from handoff)
@@ -191,7 +191,7 @@ jobs:
 
 ### Validation
 ```bash
-pytest P://packages/snapshot/tests/ P://packages/snapshot/scripts/tests/ -q
+pytest P://packages/.claude-marketplace/plugins/snapshot/tests/ P://packages/.claude-marketplace/plugins/snapshot/scripts/tests/ -q
 ruff check scripts/ tests/
 mypy scripts/ --ignore-missing-imports
 ```
@@ -226,7 +226,7 @@ mypy scripts/ --ignore-missing-imports
 
 ### Validation
 ```bash
-pytest P://packages/snapshot/tests/ P://packages/snapshot/scripts/tests/ -q
+pytest P://packages/.claude-marketplace/plugins/snapshot/tests/ P://packages/.claude-marketplace/plugins/snapshot/scripts/tests/ -q
 python -m scripts.cli diff <id1> <id2>
 python -m scripts.cli search "test"
 ```
@@ -254,7 +254,7 @@ python -m scripts.cli search "test"
 - [ ] Test on Windows (primary platform)
 
 #### 6.3 Plugin distribution
-- [ ] Test `/plugin P://packages/snapshot` installation
+- [ ] Test `/plugin P://packages/.claude-marketplace/plugins/snapshot` installation
 - [ ] Verify all hooks register correctly
 - [ ] Test uninstall and reinstall
 

@@ -71,7 +71,7 @@ in this environment, and whether it diverges from the strict (WT_SESSION) result
 ```bash
 python -c "
 import os, sys
-sys.path.insert(0, 'P://packages/snapshot/scripts/hooks/__lib')
+sys.path.insert(0, 'P://packages/.claude-marketplace/plugins/snapshot/scripts/hooks/__lib')
 from terminal_detection import _fallback_detect_terminal_id, _lookup_with_path
 session_id = os.environ.get('CLAUDE_SESSION_ID', '')  # or pass in from caller
 cwd = os.getcwd()
@@ -116,7 +116,7 @@ provides:
 ```bash
 python -c "
 import sys, os
-sys.path.insert(0, 'P://packages/snapshot/scripts/hooks/__lib')
+sys.path.insert(0, 'P://packages/.claude-marketplace/plugins/snapshot/scripts/hooks/__lib')
 from session_registry import query_registry
 tid = f'console_{__import__(\"os\").environ.get(\"WT_SESSION\",\"\")}'
 entries = query_registry(terminal_id=tid, limit=50)
@@ -168,7 +168,7 @@ print(f'  ({len(chain)} transcripts total)')
 ```bash
 python -c "
 import sys, os, json
-sys.path.insert(0, 'P://packages/snapshot/scripts/hooks/__lib')
+sys.path.insert(0, 'P://packages/.claude-marketplace/plugins/snapshot/scripts/hooks/__lib')
 from session_registry import query_registry
 
 tid = f'console_{os.environ.get(\"WT_SESSION\",\"\")}'

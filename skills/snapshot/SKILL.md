@@ -31,7 +31,7 @@ Generate session snapshots that ensure **100% work continuity** across Claude Co
 **Note**: V1 handoffs (pre-schema V2) are not automatically migrated and will be rejected at restore time. See SNAPSHOT-006.
 
 ### Implementation
-- **Package**: `snapshot` at `P://packages/snapshot`
+- **Package**: `snapshot` at `P://packages/.claude-marketplace/plugins/snapshot`
 - **Hooks**: PreCompact snapshot capture (automatic)
 - **Skill**: Claude Code skill integration via `skill/SKILL.md`
 - **Storage**: `P://.claude/state/task_tracker/`
@@ -85,7 +85,7 @@ After compact:
 
 ```bash
 # Install the snapshot package
-pip install -e P://packages/snapshot
+pip install -e P://packages/.claude-marketplace/plugins/snapshot
 
 # That's it! Snapshot capture is fully automatic:
 # - PreCompact hooks capture session state before /compact

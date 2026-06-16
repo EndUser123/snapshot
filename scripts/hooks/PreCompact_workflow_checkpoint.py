@@ -23,7 +23,7 @@ from pathlib import Path
 
 # Add skill_guard to path for skill_execution_state import
 _HOOKS_DIR = Path(__file__).resolve().parent
-_SKILL_GUARD_SRC = Path("P:\\\\\\packages/skill-guard/src")
+_SKILL_GUARD_SRC = Path("P:/packages/.claude-marketplace/plugins/skill-guard/src")
 if str(_SKILL_GUARD_SRC) in sys.path or str(_HOOKS_DIR) in sys.path:
     pass
 else:

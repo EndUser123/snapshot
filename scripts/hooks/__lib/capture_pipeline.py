@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from scripts.hooks import PreCompact_snapshot_capture
+import PreCompact_snapshot_capture
 
 
 def capture_snapshot(input_data: dict[str, Any]) -> dict[str, Any]:

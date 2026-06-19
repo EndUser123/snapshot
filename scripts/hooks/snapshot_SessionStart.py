@@ -12,7 +12,7 @@ if str(_HOOKS_DIR) not in sys.path:
 # Import child hooks
 import SessionStart_tldr as tldr
 import snapshot_SessionStart_identity_capture as identity_capture
-from scripts.hooks.__lib.restore_pipeline import restore_snapshot
+from __lib.restore_pipeline import restore_snapshot
 
 _log = logging.getLogger(__name__)
 

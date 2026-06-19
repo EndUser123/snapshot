@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from scripts.hooks import SessionStart_snapshot_restore
+import SessionStart_snapshot_restore
 
 
 def restore_snapshot(input_data: dict[str, Any]) -> dict[str, Any]:

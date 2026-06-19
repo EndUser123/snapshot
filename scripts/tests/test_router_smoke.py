@@ -90,15 +90,52 @@ def test_userpromptsubmit_uses_snapshot_router_or_global_importer() -> None:
 def _load_precompact_router():
     """Load snapshot_PreCompact.py as an isolated module so the test can
     monkeypatch its SEQUENCE without polluting sys.modules under the real name.
+
+    `__lib` is a non-unique top-level package name across this monorepo (every
+    plugin names its internal lib `__lib`). Under the shared pytest process a
+    different plugin's `__lib` may already be cached in sys.modules, so the
+    absolute `from __lib.capture_pipeline import ...` inside snapshot_PreCompact
+    would resolve to the WRONG package and raise ModuleNotFoundError. At real
+    runtime each hook runs in its own process with the hooks dir at sys.path[0],
+    so the right `__lib` always wins. We reproduce that condition here: prepend
+    the hooks dir to sys.path and purge any stale `__lib*` entries before
+    exec_module, then restore both so sibling tests are unaffected.
     """
-    path = Path(
-        "P:/packages/.claude-marketplace/plugins/snapshot/scripts/hooks/snapshot_PreCompact.py"
+    hooks_dir = Path(
+        "P:/packages/.claude-marketplace/plugins/snapshot/scripts/hooks"
     )
-    spec = importlib.util.spec_from_file_location("snapshot_precompact_under_test", path)
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
+    path = hooks_dir / "snapshot_PreCompact.py"
+
+    # Snapshot the state we are about to mutate so we can restore it.
+    saved_sys_path = list(sys.path)
+    stale_lib_modules = {
+        name: mod
+        for name, mod in sys.modules.items()
+        if name == "__lib" or name.startswith("__lib.")
+    }
+
+    for name in stale_lib_modules:
+        del sys.modules[name]
+    sys.path.insert(0, str(hooks_dir))
+
+    try:
+        spec = importlib.util.spec_from_file_location(
+            "snapshot_precompact_under_test", path
+        )
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = module
+        spec.loader.exec_module(module)
+    finally:
+        # Drop the snapshot `__lib*` we just imported, restore any pre-existing
+        # `__lib*` entries, and undo the sys.path insertion.
+        for name in [
+            n for n in sys.modules if n == "__lib" or n.startswith("__lib.")
+        ]:
+            del sys.modules[name]
+        sys.modules.update(stale_lib_modules)
+        sys.path[:] = saved_sys_path
+
     return module
 
 

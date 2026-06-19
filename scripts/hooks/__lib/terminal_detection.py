@@ -41,7 +41,7 @@ def get_verified_identity(session_id: str | None = None) -> dict | None:
 
     # 2. Locate the identity.json file in the canonical artifacts root
     # Matching $CLAUDE_ROOT/hooks\SessionStart_identity_capture.py
-    artifacts_root = Path("P:\\\\\\.claude/.artifacts")
+    artifacts_root = Path(os.environ.get("CLAUDE_ARTIFACTS_ROOT", "P:/.claude/.artifacts"))
     safe_tid = terminal_id.replace("/", "-").replace("\\", "-").replace(":", "-")
     identity_file = artifacts_root / safe_tid / "identity.json"
 

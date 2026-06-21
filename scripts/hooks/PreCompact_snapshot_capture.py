@@ -969,9 +969,24 @@ def run(input_data: dict[str, Any]) -> dict[str, Any]:
         try:
             registry_path = Path("P:\\\\\\.claude/.artifacts/session_registry.jsonl")
             registry_path.parent.mkdir(parents=True, exist_ok=True)
+
+            # Ensure terminal_id is in canonical format for registry
+            # Normalize if needed (defensive - terminal_detection.py should handle this)
+            registry_terminal_id = terminal_id
+            if terminal_id and not terminal_id.startswith("console_"):
+                # Normalize non-canonical formats to console_ format for registry writes
+                if "-" in terminal_id:  # Looks like a UUID
+                    registry_terminal_id = f"console_{terminal_id}"
+                else:
+                    registry_terminal_id = f"console_{terminal_id}"
+                logger.warning(
+                    "[PreCompact V2] Normalized non-canonical terminal_id format: %s -> %s",
+                    terminal_id, registry_terminal_id
+                )
+
             entry = {
                 "ts": datetime.now(UTC).isoformat(),
-                "terminal_id": terminal_id,
+                "terminal_id": registry_terminal_id,
                 "session_id": input_data.get("session_id", ""),
                 "transcript_path": transcript_path,
                 "goal": goal[:200],

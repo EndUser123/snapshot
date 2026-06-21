@@ -196,15 +196,18 @@ def _log_resolution(
 
 
 def _fallback_detect_terminal_id(session_id: str | None = None) -> str:
-    """Fallback using env vars, Windows console handle, and the session registry.
+    """Fallback using WT_SESSION, normalized env vars, Windows console handle, and the session registry.
 
     Resolution order:
-      1. CLAUDE_TERMINAL_ID and other terminal env vars
-      2. WT_SESSION → console_{WT_SESSION} (Windows Terminal authoritative source)
+      1. WT_SESSION → console_{WT_SESSION} (Windows Terminal authoritative source, highest priority)
+      2. CLAUDE_TERMINAL_ID and other terminal env vars → normalized to console_ format
       3. Windows console handle (`GetConsoleWindow()`)
       4. session_registry.jsonl lookup by session_id (resumed sessions)
       5. session_registry.jsonl lookup by cwd (same workspace, different session)
       6. Synthetic `session_{session_id[:12]}` (last-resort, deterministic)
+
+    All terminal env vars are normalized to `console_` format to maintain consistency
+    across all detection sources. This prevents format drift in the session registry.
 
     Steps 4-5 surface the REAL terminal_id /id would report (when one was ever
     captured for this session/cwd) rather than a synthetic id. This keeps
@@ -214,18 +217,26 @@ def _fallback_detect_terminal_id(session_id: str | None = None) -> str:
     an offline audit can compare hook resolution against /id's strict result.
     """
     cwd = os.getcwd()
-    for env_var in _TERMINAL_ENV_VARS:
-        value = os.environ.get(env_var)
-        if value:
-            tid = f"env_{value}"
-            _log_resolution("env", tid, session_id, cwd)
-            return tid
+
+    # 1. WT_SESSION is authoritative on Windows - check first
     if sys.platform == "win32":
         wt = os.environ.get("WT_SESSION")
         if wt:
             tid = f"console_{wt}"
             _log_resolution("wt_session", tid, session_id, cwd)
             return tid
+
+    # 2. Terminal env vars - normalize to console_ format for consistency
+    for env_var in _TERMINAL_ENV_VARS:
+        value = os.environ.get(env_var)
+        if value:
+            # Normalize all terminal env vars to canonical console_ format
+            tid = f"console_{value}" if not value.startswith("console_") else value
+            _log_resolution("env_normalized", tid, session_id, cwd)
+            return tid
+
+    # 3. Windows console handle fallback
+    if sys.platform == "win32":
         try:
             handle = __import__("ctypes").windll.kernel32.GetConsoleWindow()
             if handle:

@@ -16,6 +16,25 @@ logger = logging.getLogger(__name__)
 DEFAULT_REGISTRY_PATH = Path("P:/.claude/.artifacts/session_registry.jsonl")
 
 
+
+def _match_terminal_id(entry_tid: str, query_tid: str) -> bool:
+    """Match terminal_id with flexible normalization."""
+    if entry_tid == query_tid:
+        return True
+
+    # Match bare UUID against console_{UUID}
+    if "-" in query_tid and not query_tid.startswith(("console_", "env_")):
+        if entry_tid == f"console_{query_tid}":
+            return True
+
+    # Match console_{UUID} against bare UUID
+    if "-" in entry_tid and entry_tid.startswith("console_"):
+        if entry_tid == f"console_{query_tid}" or query_tid == entry_tid[8:]:
+            return True
+
+    return False
+
+
 def query_registry(
     *,
     terminal_id: str | None = None,
@@ -55,7 +74,7 @@ def query_registry(
             continue
         if not isinstance(entry, dict):
             continue
-        if terminal_id is not None and entry.get("terminal_id") != terminal_id:
+        if terminal_id is not None and not _match_terminal_id(entry.get("terminal_id", ""), terminal_id):
             continue
         if session_id is not None and entry.get("session_id") != session_id:
             continue

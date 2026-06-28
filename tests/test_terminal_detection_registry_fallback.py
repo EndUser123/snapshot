@@ -136,11 +136,12 @@ class TestRegistryLookupByCwd:
 
 class TestFallbackChainOrder:
     def test_synthetic_only_when_all_sources_fail(self, isolated_registry):
-        # Empty registry → no lookup match → falls through to synthetic.
-        # Synthetic format: f"session_{session_id[:12]}"
+        # Empty registry -> no lookup match -> canonical derived fallback.
         from terminal_detection import _fallback_detect_terminal_id
         tid = _fallback_detect_terminal_id("orphan-sess-abc123")
-        assert tid == "session_" + "orphan-sess-abc123"[:12]
+        # No env, empty registry -> canonical derived fallback (sha1 ppid), never synthetic.
+        assert tid.startswith("console_")
+        assert not tid.startswith("session_")
 
     def test_registry_match_preempts_synthetic(self, isolated_registry):
         _write_entry(
@@ -157,13 +158,13 @@ class TestFallbackChainOrder:
             f"Expected registry hit to preempt synthetic, got {tid}"
         )
 
-    def test_empty_session_id_returns_empty_string(self, isolated_registry):
+    def test_empty_session_id_returns_derived_id(self, isolated_registry):
         from terminal_detection import _fallback_detect_terminal_id
-        # No env, no console handle, no session_id → empty.
-        # (resolve_terminal_key will then raise ValueError, which is correct
-        # for the no-information-at-all case.)
+        # No env, no registry hit, no session_id -> canonical derived fallback.
+        # The fallback now ALWAYS returns a stable unique console_<id>; the
+        # legacy "" return (which made resolve_terminal_key raise) is gone.
         tid = _fallback_detect_terminal_id(None)
-        assert tid == ""
+        assert tid.startswith("console_")
 
 
 class TestLookupWithPath:
@@ -226,18 +227,18 @@ class TestResolutionLogging:
         _fallback_detect_terminal_id("some-sess")
         entries = self._read_log(log_path)
         assert len(entries) == 1
-        assert entries[0]["path"] == "env"
-        assert entries[0]["returned"] == "env_abc123"
+        assert entries[0]["path"] == "canonical_env"
+        assert entries[0]["returned"] == "console_abc123"
         assert entries[0]["session_id"] == "some-sess"
 
     def test_synthetic_path_logged(self, log_path, isolated_registry):
-        # No env vars, empty registry → falls through to synthetic.
+        # No env vars, empty registry -> canonical derived fallback.
         from terminal_detection import _fallback_detect_terminal_id
         _fallback_detect_terminal_id("orphan-sess-xyz")
         entries = self._read_log(log_path)
         assert len(entries) == 1
-        assert entries[0]["path"] == "synthetic"
-        assert entries[0]["returned"].startswith("session_")
+        assert entries[0]["path"] == "canonical_derived"
+        assert entries[0]["returned"].startswith("console_")
 
     def test_registry_sid_path_logged(self, log_path, isolated_registry):
         _write_entry(
@@ -258,11 +259,11 @@ class TestResolutionLogging:
     def test_empty_path_logged_when_no_signals(self, log_path, isolated_registry):
         from terminal_detection import _fallback_detect_terminal_id
         tid = _fallback_detect_terminal_id(None)  # no session_id either
-        assert tid == ""
+        assert tid.startswith("console_")  # canonical derived fallback
         entries = self._read_log(log_path)
         assert len(entries) == 1
-        assert entries[0]["path"] == "empty"
-        assert entries[0]["returned"] == ""
+        assert entries[0]["path"] == "canonical_derived"
+        assert entries[0]["returned"] == tid
 
     def test_log_disk_error_does_not_break_detection(self, isolated_registry, monkeypatch, tmp_path):
         """If logging itself fails, fallback still returns a valid result."""
@@ -275,7 +276,7 @@ class TestResolutionLogging:
         from terminal_detection import _fallback_detect_terminal_id
         # Must not raise.
         tid = _fallback_detect_terminal_id("any-sess")
-        assert tid == "env_fallback-still-works"
+        assert tid == "console_fallback-still-works"
 
 
 class TestRegistryFailureModes:

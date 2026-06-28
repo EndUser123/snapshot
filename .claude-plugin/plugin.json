@@ -1,7 +1,7 @@
 {
   "name": "snapshot",
   "description": "Session snapshot capture and restore system for Claude Code sessions. Captures terminal state, git context, test results, pending questions, and recent errors to enable seamless context restoration across compactions and multi-terminal workflows.",
-  "version": "0.5.22",
+  "version": "0.5.23",
   "author": {
     "name": "Bruce Thomson"
   }

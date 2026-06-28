@@ -16,6 +16,8 @@ import os
 import sys
 from pathlib import Path
 
+from canonical_terminal_id import canonical_terminal_id, canonical_terminal_id_from_env
+
 _TERMINAL_ENV_VARS = [
     "CLAUDE_TERMINAL_ID",
     "TERMINAL_ID",
@@ -199,68 +201,37 @@ def _fallback_detect_terminal_id(session_id: str | None = None) -> str:
     """Fallback using WT_SESSION, normalized env vars, Windows console handle, and the session registry.
 
     Resolution order:
-      1. WT_SESSION → console_{WT_SESSION} (Windows Terminal authoritative source, highest priority)
-      2. CLAUDE_TERMINAL_ID and other terminal env vars → normalized to console_ format
-      3. Windows console handle (`GetConsoleWindow()`)
-      4. session_registry.jsonl lookup by session_id (resumed sessions)
-      5. session_registry.jsonl lookup by cwd (same workspace, different session)
-      6. Synthetic `session_{session_id[:12]}` (last-resort, deterministic)
+      1. canonical_terminal_id_from_env() — shared algorithm: CLAUDE_TERMINAL_ID,
+         WT_SESSION, ITERM_SESSION_ID, WEZTERM_SESSION_ID, TMUX, ConEmuServerPID.
+         Produces the same `console_<id>` every reader derives (no format drift).
+      2. session_registry.jsonl lookup by session_id/cwd — resume continuity.
+         Recovers a prior terminal_id when no live terminal env signal is present
+         (e.g. resumed in a bare shell). Preserved feature; not new-derivation.
+      3. canonical_terminal_id() derived fallback — sha1(ppid), unique per
+         terminal and stable for its lifetime. Replaces the legacy synthetic
+         `session_{session_id[:12]}` which no reader could derive.
 
-    All terminal env vars are normalized to `console_` format to maintain consistency
-    across all detection sources. This prevents format drift in the session registry.
-
-    Steps 4-5 surface the REAL terminal_id /id would report (when one was ever
-    captured for this session/cwd) rather than a synthetic id. This keeps
-    artifacts under the same `console_<wt>` directory across sessions.
-
-    Every return site logs (path, returned) to terminal_resolution.jsonl so
-    an offline audit can compare hook resolution against /id's strict result.
+    Every return site logs (path, returned) to terminal_resolution.jsonl so an
+    offline audit can compare hook resolution against /id's strict result.
     """
     cwd = os.getcwd()
 
-    # 1. WT_SESSION is authoritative on Windows - check first
-    if sys.platform == "win32":
-        wt = os.environ.get("WT_SESSION")
-        if wt:
-            tid = f"console_{wt}"
-            _log_resolution("wt_session", tid, session_id, cwd)
-            return tid
+    # 1. Canonical env-signal detection (shared across all plugins).
+    tid = canonical_terminal_id_from_env()
+    if tid:
+        _log_resolution("canonical_env", tid, session_id, cwd)
+        return tid
 
-    # 2. Terminal env vars - normalize to console_ format for consistency
-    for env_var in _TERMINAL_ENV_VARS:
-        value = os.environ.get(env_var)
-        if value:
-            # Normalize all terminal env vars to canonical console_ format
-            tid = f"console_{value}" if not value.startswith("console_") else value
-            _log_resolution("env_normalized", tid, session_id, cwd)
-            return tid
-
-    # 3. Windows console handle fallback
-    if sys.platform == "win32":
-        try:
-            handle = __import__("ctypes").windll.kernel32.GetConsoleWindow()
-            if handle:
-                tid = f"console_{hex(handle)[2:]}"
-                _log_resolution("console_handle", tid, session_id, cwd)
-                return tid
-        except Exception:
-            pass
-
-    # Registry-backed lookup — uses the same authoritative store /id queries.
+    # 2. Registry-backed lookup — resume continuity (preserved feature).
     registry_tid, registry_path = _lookup_with_path(session_id, cwd)
     if registry_tid:
         _log_resolution(registry_path, registry_tid, session_id, cwd)
         return registry_tid
 
-    # Last resort: derive from session_id if available — prevents ValueError
-    # from propagating as user-visible "Handoff V2 restore error" in edge-case
-    # environments where all terminal detection sources return empty.
-    if session_id:
-        tid = f"session_{session_id[:12]}"
-        _log_resolution("synthetic", tid, session_id, cwd)
-        return tid
-    _log_resolution("empty", "", session_id, cwd)
-    return ""
+    # 3. Derived fallback — shared algorithm; never synthetic, never static.
+    tid = canonical_terminal_id()
+    _log_resolution("canonical_derived", tid, session_id, cwd)
+    return tid
 
 
 def detect_terminal_id(session_id: str | None = None) -> str:

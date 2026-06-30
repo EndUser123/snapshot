@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.23] - 2026-06-30
+
+### Changed
+- **Terminal ID canonicalization** — All terminal_id writers now produce `console_<uuid>` via
+  shared `canonical_terminal_id()` algorithm instead of `env_<hash>`.
+- **Legacy prefix cutover (#900)** — Old `env_`/`session_` registry keys accepted as-is;
+  no backfill. Readers tolerate both formats via `_match_terminal_id()` normalization.
+  Pre-fix terminal history is permanently unmatchable by the new `console_` path — a
+  bounded loss window.
+
+### Added
+- **Cross-compact e2e harness** (`tests/test_cross_compact_e2e.py`) — subprocess test
+  proving a post-compaction step re-derives the same run identity from terminal_id+cwd.
+
 ## [0.3.3] - 2026-03-22
 
 ### Added

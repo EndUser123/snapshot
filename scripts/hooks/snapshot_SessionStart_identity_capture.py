@@ -12,14 +12,14 @@ from __future__ import annotations
 
 import json
 import os
-import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
-_HOOKS_DIR = Path(__file__).resolve().parent
-sys.path.insert(0, str(_HOOKS_DIR / "__lib"))
-
-from terminal_detection import detect_terminal_id
+# Import as a package member (not top-level) so terminal_detection's own
+# relative import of .canonical_terminal_id resolves. Matches the other
+# callers (PreCompact_snapshot_capture, SessionStart_snapshot_restore,
+# task_identity_manager). Do NOT re-add a sys.path insert for __lib/.
+from scripts.hooks.__lib.terminal_detection import detect_terminal_id
 
 _REGISTRY_MAX_LINES = 10_000
 _REGISTRY_KEEP_LINES = 5_000

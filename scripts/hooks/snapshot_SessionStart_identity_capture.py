@@ -12,13 +12,19 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
+# Context-B bootstrap (matches SessionStart_snapshot_restore.py / PreCompact_snapshot_capture):
+# PACKAGE_ROOT must be on sys.path BEFORE importing scripts.hooks.* modules.
+PACKAGE_ROOT = Path(__file__).resolve().parents[2]
+if str(PACKAGE_ROOT) not in sys.path:
+    sys.path.insert(0, str(PACKAGE_ROOT))
+
 # Import as a package member (not top-level) so terminal_detection's own
-# relative import of .canonical_terminal_id resolves. Matches the other
-# callers (PreCompact_snapshot_capture, SessionStart_snapshot_restore,
-# task_identity_manager). Do NOT re-add a sys.path insert for __lib/.
+# relative import of .canonical_terminal_id resolves. Do NOT re-add a
+# sys.path insert for __lib/ — that created a second, incompatible load context.
 from scripts.hooks.__lib.terminal_detection import detect_terminal_id
 
 _REGISTRY_MAX_LINES = 10_000

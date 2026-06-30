@@ -16,7 +16,7 @@ import os
 import sys
 from pathlib import Path
 
-from canonical_terminal_id import canonical_terminal_id, canonical_terminal_id_from_env
+from .canonical_terminal_id import canonical_terminal_id, canonical_terminal_id_from_env
 
 _TERMINAL_ENV_VARS = [
     "CLAUDE_TERMINAL_ID",

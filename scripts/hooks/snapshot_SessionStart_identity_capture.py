@@ -79,28 +79,6 @@ def run(data: dict) -> dict | None:
     if not isinstance(data, dict):
         return None
 
-    # ponytail: throwaway probe (remove after #899). Captures which env signals
-    # survive the hook boundary + what payload fields are available, to choose
-    # between payload-based vs file-handoff terminal_id fix routes.
-    try:
-        probe_path = Path(os.environ.get("CLAUDE_PROJECT_DIR", "P:/")) / ".claude" / ".artifacts" / "_probe" / "identity_probe.jsonl"
-        probe_path.parent.mkdir(parents=True, exist_ok=True)
-        probe_entry = {
-            "ts": datetime.now(UTC).isoformat(),
-            "env_CLAUDE_TERMINAL_ID": os.environ.get("CLAUDE_TERMINAL_ID"),
-            "env_WT_SESSION": os.environ.get("WT_SESSION"),
-            "env_ITERM_SESSION_ID": os.environ.get("ITERM_SESSION_ID"),
-            "env_WEZTERM_SESSION_ID": os.environ.get("WEZTERM_SESSION_ID"),
-            "env_TMUX": os.environ.get("TMUX"),
-            "env_ConEmuServerPID": os.environ.get("ConEmuServerPID"),
-            "payload_keys": sorted(data.keys()),
-            "ppid": os.getppid(),
-        }
-        with probe_path.open("a", encoding="utf-8") as pf:
-            pf.write(json.dumps(probe_entry, ensure_ascii=False) + "\n")
-    except Exception:
-        pass
-
     terminal_id = detect_terminal_id()
     if not terminal_id:
         return None

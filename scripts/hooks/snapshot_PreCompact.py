@@ -88,10 +88,16 @@ def main():
         if len(warnings) > 1:
             reasons = [w[1].get("reason", w[0]) for w in warnings]
             final_output["reason"] = " + ".join(reasons)
-            
+
+        # ponytail: "approve" is invalid schema — on allow emit only the
+        # context payload (see hooks/CLAUDE.md Hook Output Formats).
+        if final_output.get("decision") == "approve":
+            final_output = {
+                k: v for k, v in final_output.items() if k == "additionalContext"
+            }
         print(json.dumps(final_output, indent=2))
     else:
-        print(json.dumps({"decision": "approve", "reason": "PreCompact: all child hooks silent"}))
+        print(json.dumps({}))
 
     sys.exit(0)
 

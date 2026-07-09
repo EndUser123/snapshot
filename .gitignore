@@ -164,3 +164,6 @@ assets/videos/
 .state/
 
 .git
+
+.in_use/
+.aid/

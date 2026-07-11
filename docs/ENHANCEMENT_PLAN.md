@@ -170,22 +170,43 @@ matters if the core extraction is broken.
 
 **Scope:**
 
-- [ ] **F1 fix** — `_extract_text_from_entry` in `transcript.py`: extract intent
-      from `<command-args>...</command-args>` instead of skipping the entire
-      message when it starts with `<`.
-- [ ] **F4 fix** — Decision patterns in `transcript.py`: filter out auto-injected
-      skill documentation ("Base directory for this skill:", system status lines).
-- [ ] **F5 fix** — `extract_pending_operations` in `transcript.py`: fix completion
-      detection to use `tool_use_id` from nested `tool_result` entries inside
-      user-message content, not `type == "tool"` at top level.
-- [ ] **Fix test fixtures** — Update `test_canonical_goal_extraction.py`,
-      `test_pending_operations_extraction.py`, and other affected tests to use
-      production transcript shapes. Tests currently pass against fixtures that
-      don't match real data.
+- [ ] **F1 fix** — `_extract_text_from_entry` in `transcript.py:1651-1679`: the
+      `<` filter at lines 1675-1677 skips any string starting with `<`, which
+      discards the `<command-args>...</command-args>` wrapper around slash-command
+      goals. Extract intent from inside the wrapper instead of skipping the whole
+      message. Note: a secondary path `_extract_slash_command_goal()` at
+      `PreCompact_snapshot_capture.py:404-432` already recovers the command name
+      via regex — the fix should make the primary path correct and decide whether
+      the secondary path becomes redundant.
+- [ ] **F4 fix (DUAL PATH — both must be fixed)** — Decision patterns fire on
+      auto-injected skill documentation in **two independent extraction paths**.
+      Only one is currently filtered:
+      - `_build_decisions()` at `PreCompact_snapshot_capture.py:528` — **HAS**
+        `_is_decision_noise()` filter (line 466) catching "base directory for
+        this skill", "usage:", "##", second-person feedback, etc.
+      - `extract_session_decisions()` at `transcript.py:1875-1945` — **NO** noise
+        filter; `_DECISION_COMBINED` fires on any user entry containing the patterns.
+      Fix: extract `_is_decision_noise()` into `__lib/` (e.g. `decision_filters.py`)
+      and apply to both paths. DRY — single source of truth.
+- [ ] **F5 fix** — `extract_pending_operations` in `transcript.py:2292-2300`:
+      completion detection looks for top-level `type == "tool"` entries, but
+      production transcripts nest tool results as `{"type":"tool_result",
+      "tool_use_id":"call_xxx"}` inside user-message content arrays. Fix to scan
+      nested `tool_result` blocks and match by `tool_use_id`.
+- [ ] **Fix test fixtures** — The scenario fixtures
+      (`tests/fixtures/test_scenarios/scenario_A/E/F_transcript.jsonl`) use FLAT
+      format (`{"type":"tool_use","name":"Edit","input":{...}}` at top level),
+      not production nested format (`{"type":"assistant","message":{"content":
+      [{"type":"tool_use",...}]}}`). Update fixtures to production shapes.
+      NOTE: `core/hooks/__init__.py:16-72` (CoreHooksFinder meta path finder)
+      redirects `core.hooks.__lib.*` imports to `scripts/hooks/__lib/*` — so tests
+      importing from `core.hooks.__lib.transcript` run the SAME code as runtime.
+      The test/runtime gap is from fixture format, not module aliasing.
 - [ ] **Regression test** — Add a test that runs extraction against a real
       transcript (sanitized) to catch format drift.
 
-**Complexity:** Low — bug fixes, ~50-80 lines of changes.
+**Complexity:** Low — bug fixes, ~50-80 lines of changes (F4 slightly more due
+to shared-filter extraction).
 **Risk:** Low — fixing broken behavior.
 
 ---
@@ -208,6 +229,12 @@ plugin. ~20 lines to close.
 - [ ] Verify redaction happens BEFORE `build_envelope()` (checksum ordering).
 - [ ] Update `snapshot_SessionEnd_tldr.py` to import from `__lib/redaction.py`
       (DRY — single source of truth).
+- [ ] Augment `_SECRET_PATTERNS` by merging with the global Stop hook's
+      `secret_scanner.py` patterns before extracting to `__lib/redaction.py`.
+      The snapshot's 8 patterns (OpenAI, AWS, GitHub, Slack, Firebase, API key,
+      secret/password, bearer token) may not cover all formats the scanner
+      catches. `__lib/redaction.py` should become the shared source of truth
+      for both files.
 - [ ] Add test: `_redact_secrets` applied to each field, checksum still valid.
 
 **Complexity:** ~20 lines of call sites + ~40 lines moved to shared module.
@@ -215,58 +242,27 @@ plugin. ~20 lines to close.
 
 ---
 
-### P1: Agent-authored handoff via PreCompact `[INFERENCE — needs verification]`
+### P1: Context-threshold nudge via UserPromptSubmit (V3) `[VERIFIED]`
 
-**Priority rationale:** The session model already holds ground truth — it
-doesn't need to extract from a hostile transcript format. Strictly better than
-post-hoc extraction (regex or LLM trio) for the semantic fields (goal,
-decisions, next-step).
+**Priority rationale (revised 2026-07-11):** The agent-authored handoff
+approach was evaluated and REJECTED (see below). The context-threshold nudge
+is now the primary P1 mechanism for improving extraction quality. It prevents
+the core problem — compaction firing when the model is already degraded. If
+the model writes its handoff at 50-70% context instead of 95%, extraction
+quality improves regardless of extraction method. The nudge is advisory text
+(same mechanism as skill routing directives), so its compliance ceiling is
+~50-70% — not guaranteed. The LLM trio extraction (deferred fallback below)
+remains the guaranteed-quality floor.
 
-**The unverified assumption:** Can the PreCompact hook prompt the model to emit
-structured output (goal/decisions/next-step) before compaction proceeds?
-
-- PreCompact fires *before* compaction, so the model still has full context.
-- The hook's `additionalContext` field can inject a prompt requesting structured
-  output.
-- **Unknown:** Does the model get to respond before compaction happens, or does
-  compaction proceed immediately after the hook returns?
-
-**Verification step (required before implementation):**
-1. Read the PreCompact hook protocol in Claude Code docs — does it support a
-   two-way exchange or is it fire-and-forget?
-2. If fire-and-forget: the agent-authored approach requires a different trigger
-   (e.g., context-threshold nudge at P1 asking the model to write a summary,
-   or a `/snapshot` skill the model invokes voluntarily).
-3. If two-way: implement the structured-output prompt and test capture.
-
-**Fallback if PreCompact can't capture model output:**
-LLM trio extraction (glm-5.2 + MiniMax-M3 + mistral-medium-latest) reading the
-last 50 transcript entries. Infrastructure already proven in
-`Stop_semantic_critic.py:1042-1161` (ThreadPoolExecutor, conservative
-combination, fail-open). The `hook_external_llm_policy.md` documents the
-approved pattern with all four safeguards.
-
-**Scope (contingent on verification):**
-
-- [ ] Verify PreCompact hook protocol (two-way vs fire-and-forget).
-- [ ] If two-way: design structured-output prompt for goal/decisions/next-step.
-- [ ] If fire-and-forget: design context-threshold nudge (P1 item below) that
-      asks the model to author its handoff at ~70% context.
-- [ ] Keep regex extraction as labeled low-confidence fallback.
-- [ ] Tag agent-authored fields as `extraction_method: "agent"` in the envelope.
-- [ ] Tag regex fields as `extraction_method: "regex_fallback"`.
-
-**Complexity:** Medium — new capture path, schema changes.
-**Risk:** Medium — depends on PreCompact protocol verification.
-
----
-
-### P1: Context-threshold nudge via UserPromptSubmit (V3)
-
-**Priority rationale:** Prevents the core problem — compaction firing when the
-model is already degraded. If the model writes its handoff at 50-70% context
-instead of 95%, extraction quality improves dramatically regardless of
-extraction method.
+**Existing infrastructure (VERIFIED):** `snapshot_UserPromptSubmit.py` already
+provides the proven injection pathway for mid-session context injection:
+- `handoff_task_injector_hook` registered at `priority=1.0` (lines 224-265)
+- Reads compaction marker → loads envelope → `build_restore_message_compact()`
+  → returns `HookResult(context=message)`
+- Marker file protocol (`_marker_path`, `_load_marker`, `_clear_marker`)
+- State directory helpers (`_locate_hooks_state_dir`)
+- Both UserPromptSubmit hooks coexist via the UPS dispatcher —
+  the nudge hook would be a parallel registry entry at a lower priority.
 
 **Scope:**
 
@@ -274,23 +270,33 @@ extraction method.
       - Reverse-scans the last ~50 transcript lines for `message.usage`
       - Sums `input_tokens + cache_read_input_tokens + cache_creation_input_tokens`
       - Returns pressure as a fraction of context window size
-- [ ] Add a UserPromptSubmit hook (or extend existing chain at settings.json:179)
+- [ ] Add a UserPromptSubmit hook (parallel registry entry, priority < 1.0)
       that calls the pressure function and injects a nudge via
-      `additionalContext` when pressure exceeds threshold.
+      `HookResult(context=...)` when pressure exceeds threshold.
 - [ ] Threshold: start at 70% (conservative). The nudge should say something like:
       `"Context at {pct}% — consider wrapping up key decisions or running /compact
       while context is still manageable."`
 - [ ] Calibrate after 2 weeks of usage data — adjust threshold based on when
       compaction actually fires vs. when the nudge was shown.
 
-**Complexity:** ~30-40 lines for the monitor + hook wiring.
-**Risk:** Low — uses existing data, existing injection channel, proven read pattern.
+**Compliance caveat:** The nudge is advisory text injected via the same channel
+as skill routing directives. The `handoff-pre-compact-problems` wiki page
+documents a ~50% compliance ceiling for this mechanism shape. The nudge is a
+probabilistic signal, not a reliable lever. If the model ignores it, extraction
+quality is unchanged — the LLM trio fallback (see Deferred below) remains the
+guaranteed floor.
 
-**Anchor assumption (shared with agent-authored handoff):** both P1 items assume
-the context window denominator is known and stable per model (200k for Sonnet/Opus
-4.x, 1M for long-context models). This needs confirmation — the transcript's
-`usage` object gives numerator but not denominator. Claude Code's `--model` flag
-or `~/.claude.json` may expose the active model's window size.
+**Anchor assumption:** The transcript's `message.usage` gives the numerator
+(`input_tokens + cache_read_input_tokens + cache_creation_input_tokens`) but
+no `context_window_size` denominator. The window size must come from the
+active model's spec (200K for Sonnet/Opus 4.x, 1M for long-context models).
+Resolution: `~/.claude.json` or `--model` flag may expose this; needs
+confirmation during implementation.
+
+**Complexity:** ~30-40 lines for the monitor + hook wiring (using existing UPS
+infrastructure).
+**Risk:** Low — uses existing data, existing injection channel, proven pattern.
+
 
 ---
 
@@ -392,14 +398,34 @@ hook multiplies cost for no incremental safety.
 The one unbounded field is `goal`/`last_user_message` (full verbatim user
 message). That's a goal-extraction bug (P0), not a payload-size problem.
 
+### Agent-authored handoff via PreCompact
+
+**Reason rejected (2026-07-11, after verification):** PreCompact is fire-and-forget
+— confirmed by reading `PreCompact_snapshot_capture.py:1015-1023`, which returns
+only `{"decision": "approve", "reason": "...", "additionalContext": "..."}`.
+There is no model-response slot in the hook protocol. The hook fires synchronously
+and compaction proceeds immediately after it returns. The model never sees a prompt
+from the hook. This was previously `[INFERENCE]` and is now resolved to `[REJECTED]`.
+
+The intended signal — asking the model to author a handoff — has been re-routed to
+the context-threshold nudge (P1), which uses the UserPromptSubmit injection channel
+(same mechanism as `snapshot_UserPromptSubmit.py:224-265`).
+
 ### LLM trio extraction (standalone)
 
-**Reason deferred:** Agent-authored handoff (P1) strictly dominates LLM trio
-extraction for the semantic fields — the hot model knows more than three cold
-models reading truncated transcript. If PreCompact protocol verification fails
-and the context-threshold nudge approach is used instead, the LLM trio becomes
-the fallback extraction method using the proven infrastructure from
-`Stop_semantic_critic.py`.
+**Reason deferred (revised 2026-07-11):** Previously deferred in favor of
+agent-authored handoff (which is now REJECTED). It is now the standing fallback to
+the context-threshold nudge. The nudge is advisory text with a known ~50-70%
+compliance ceiling (same mechanism as skill routing directives — documented in
+`handoff-pre-compact-problems` wiki page). When the model ignores the nudge,
+extraction quality is unchanged; the trio extraction becomes the mechanism for
+producing quality-structured handoff content.
+
+Implementation pathway: Use the proven infrastructure from
+`Stop_semantic_critic.py:1042-1161` (ThreadPoolExecutor, conservative combination,
+fail-open with 3-way majority). The `hook_external_llm_policy.md` documents the
+approved pattern with all four safeguards. See P1 context-threshold nudge for
+precedence order: nudge → regex fallback → LLM trio as guaranteed floor.
 
 ### Dynamic freshness (session-duration scaling)
 
@@ -455,8 +481,6 @@ and status lifecycle (pending → consumed/rejected) all work correctly.
 P0 (fix bugs + security)     ──→ ship immediately
   │
   ├─ P1 context nudge        ──→ ship after P0 (improves all extraction quality)
-  │
-  ├─ P1 agent-authored       ──→ verify PreCompact protocol, then ship
   │
   ├─ P2 freshness 35min      ──→ one-line change, ship anytime after P0
   │

@@ -39,8 +39,9 @@ and `extract_pending_operations` on 3 real sessions.
 | `8784e6c7` | `"yes please"` | What is the optimal long-term solution for multi-terminals? | No |
 | `2a271f2a` | `"Skill /cc-skills-utils:git is already loaded above..."` | Implement bounded fix in canonical debrief skill | No |
 
-**Scorecard: 0/3 goals correct, 0 real decisions captured, 15/15 pending ops
-mislabeled as in-progress.**
+**Scorecard: 0/3 goals correct, 0 real decisions captured (via
+`extract_session_decisions()` — the standalone function path; see F4 detail),
+15/15 pending ops mislabeled as in-progress.**
 
 **Root causes (3 distinct bugs):**
 
@@ -48,7 +49,8 @@ mislabeled as in-progress.**
    wrap intent in `<command-args>...</command-args>`. The parser's
    `_extract_text_from_entry` skips strings starting with `<` (designed for
    `<system-reminder>`), silently discarding the session's actual objective.
-   Affects the majority of sessions in this workspace.
+   Affects slash-command sessions (3/3 in the sample; common in this
+   workspace, ratio not statistically surveyed).
 
 2. **F4 — Decision regex matches skill READMEs.** Auto-injected
    "Base directory for this skill:" documentation contains `## Usage`,
@@ -94,10 +96,11 @@ defines `_SECRET_PATTERNS` (OpenAI, AWS, GitHub, Slack, Firebase, API keys,
 bearer tokens, passwords) and `_redact_secrets()`. Applied only to the tldr
 hook's `accomplishments` field, never to the PreCompact handoff envelope.
 
-**Critical ordering constraint:** Redaction MUST happen before `build_envelope()`
-(`PreCompact_snapshot_capture.py:947`), because the SHA-256 checksum is computed
-over the envelope (`snapshot_v2.py:674`). Redact-then-checksum is the only
-correct sequence.
+**Critical ordering constraint:** Redaction MUST happen to the field strings
+BEFORE they are passed as arguments to `build_resume_snapshot()`
+(`PreCompact_snapshot_capture.py:947`), because the SHA-256 checksum in
+`build_envelope()` (`snapshot_v2.py:674`) is computed over whatever is in the
+snapshot dict at that point. Redact-then-build, not redact-after-build.
 
 ---
 
@@ -202,6 +205,10 @@ matters if the core extraction is broken.
       redirects `core.hooks.__lib.*` imports to `scripts/hooks/__lib/*` — so tests
       importing from `core.hooks.__lib.transcript` run the SAME code as runtime.
       The test/runtime gap is from fixture format, not module aliasing.
+- [ ] **Update test assertions** — Existing tests assert specific pending ops as
+      `"in_progress"`. These assertions will return different results once
+      completion detection correctly marks completed operations. Assertions must
+      be updated to match the fixed behavior.
 - [ ] **Regression test** — Add a test that runs extraction against a real
       transcript (sanitized) to catch format drift.
 
@@ -250,9 +257,10 @@ is now the primary P1 mechanism for improving extraction quality. It prevents
 the core problem — compaction firing when the model is already degraded. If
 the model writes its handoff at 50-70% context instead of 95%, extraction
 quality improves regardless of extraction method. The nudge is advisory text
-(same mechanism as skill routing directives), so its compliance ceiling is
-~50-70% — not guaranteed. The LLM trio extraction (deferred fallback below)
-remains the guaranteed-quality floor.
+(same mechanism as skill routing directives) — compliance for this channel is
+~50% for skill routing (see Compliance caveat below); context-nudge compliance
+is unmeasured. The LLM trio extraction (deferred fallback below) is the
+planned guaranteed-quality floor, not yet implemented.
 
 **Existing infrastructure (VERIFIED):** `snapshot_UserPromptSubmit.py` already
 provides the proven injection pathway for mid-session context injection:
@@ -273,18 +281,23 @@ provides the proven injection pathway for mid-session context injection:
 - [ ] Add a UserPromptSubmit hook (parallel registry entry, priority < 1.0)
       that calls the pressure function and injects a nudge via
       `HookResult(context=...)` when pressure exceeds threshold.
-- [ ] Threshold: start at 70% (conservative). The nudge should say something like:
-      `"Context at {pct}% — consider wrapping up key decisions or running /compact
-      while context is still manageable."`
+- [ ] Threshold `[HYPOTHESIS]`: start at 70% (no measurement behind this value —
+      simply "before context is critically full"). The nudge should say something
+      like: `"Context at {pct}% — consider wrapping up key decisions or running
+      /compact while context is still manageable."`
 - [ ] Calibrate after 2 weeks of usage data — adjust threshold based on when
       compaction actually fires vs. when the nudge was shown.
 
-**Compliance caveat:** The nudge is advisory text injected via the same channel
-as skill routing directives. The `handoff-pre-compact-problems` wiki page
-documents a ~50% compliance ceiling for this mechanism shape. The nudge is a
-probabilistic signal, not a reliable lever. If the model ignores it, extraction
-quality is unchanged — the LLM trio fallback (see Deferred below) remains the
-guaranteed floor.
+**Compliance caveat `[INFERENCE]`:** The nudge is advisory text injected via
+the same channel as skill routing directives. The `skill-enforcement-deep-dive`
+wiki page documents a ~50% compliance improvement for skill-routing advisory
+text (Layer 1 UserPromptSubmit injection). Skill routing and context nudging
+use the same mechanism (advisory text via `additionalContext`/`HookResult`),
+but compliance for a context-pressure nudge specifically has NOT been measured
+— the ~50% figure is from skill routing data extrapolated to this domain.
+The nudge is a probabilistic signal, not a reliable lever. If the model ignores
+it, extraction quality is unchanged — the LLM trio extraction (see Deferred
+below) is the planned guaranteed-quality floor, not yet implemented.
 
 **Anchor assumption:** The transcript's `message.usage` gives the numerator
 (`input_tokens + cache_read_input_tokens + cache_creation_input_tokens`) but
@@ -293,8 +306,9 @@ active model's spec (200K for Sonnet/Opus 4.x, 1M for long-context models).
 Resolution: `~/.claude.json` or `--model` flag may expose this; needs
 confirmation during implementation.
 
-**Complexity:** ~30-40 lines for the monitor + hook wiring (using existing UPS
-infrastructure).
+**Complexity:** ~30-40 lines of code. The reverse-tail-scan of ~50 transcript
+lines is fast (~1ms per call, proven by the same pattern in `model_tier.py`),
+so per-turn cost on every UserPromptSubmit is negligible.
 **Risk:** Low — uses existing data, existing injection channel, proven pattern.
 
 
@@ -308,6 +322,10 @@ change. Measure before building anything dynamic.
 **Scope:**
 
 - [ ] Change `HANDOFF_FRESHNESS_MINUTES` default from 20 to 35.
+      Justification `[HYPOTHESIS]`: typical user break between sessions in
+      this workspace (lunch, context-switch) appears to be ~25-45 min based on
+      observed session timestamps; 35 min covers this without exceeding the
+      ~50 min task-switch latency. Measure and recalibrate.
 - [ ] Monitor for 2 weeks: track stale rejections vs. legitimate restores.
 - [ ] If stale rejections increase significantly, reconsider.
 
@@ -325,7 +343,8 @@ change.
 **Scope:**
 
 - [ ] Register a PostCompact hook in settings.json (event confirmed to exist
-      per official docs).
+      per official docs; VERIFY it fires in the current Claude Code version
+      before implementing).
 - [ ] Log the compaction output alongside the snapshot for comparison.
 - [ ] After accumulating data, assess whether the built-in summary is good
       enough to use as a restore source, or whether our extraction is needed.
@@ -343,7 +362,10 @@ restored session a second chance.
 
 **Scope:**
 
-- [ ] Keep last 3 snapshots per terminal (currently newest-only).
+- [ ] Keep last 3 snapshots per terminal (currently newest-only). `[HYPOTHESIS]`
+      3 is an arbitrary starting point — enough for fallback without unbounded
+      growth. Calibrate: if the 3rd-oldest is routinely consumed, increase;
+      if the oldest is always stale, decrease.
 - [ ] On restore failure (checksum, stale, invalid), fall back to prior
       snapshot in history.
 - [ ] Add `--history` flag or skill command to manually pull older snapshots
@@ -462,6 +484,11 @@ sessions, and the only source for cross-compaction transcript chains.
 **Consumers that depend on it:** `terminal_detection.py` (resume continuity),
 `search-research/core/session_chain.py` (authoritative strategy),
 `chs_cli.py` (`/chs export`).
+
+**Minor concern:** The registry has ~2,818 lines with a 10,000-line prune
+threshold and two separate prune mechanisms (a maintenance smell). The
+registry's purpose is sound, but the dual-prune design should be consolidated
+if the registry is extended.
 
 ### SHA-256 checksum validation is sound
 

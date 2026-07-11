@@ -52,11 +52,16 @@ and `extract_pending_operations` on 3 real sessions.
    Affects slash-command sessions (3/3 in the sample; common in this
    workspace, ratio not statistically surveyed).
 
-2. **F4 — Decision regex matches skill READMEs.** Auto-injected
-   "Base directory for this skill:" documentation contains `## Usage`,
-   `**Strategy:**`, etc. Decision patterns (`use\s+\w+\s+instead`, `strategy:`,
-   `plan:`) fire on this documentation text. 5/5 decision hits across 3 sessions
-   were false positives on READMEs; 0/5 were real decisions.
+2. **F4 — Decision regex matches skill READMEs (standalone function path).**
+   Auto-injected "Base directory for this skill:" documentation contains
+   `## Usage`, `**Strategy:**`, etc. Decision patterns (`use\s+\w+\s+instead`,
+   `strategy:`, `plan:`) fire on this documentation text. 5/5 decision hits
+   across 3 sessions were false positives on READMEs; 0/5 were real decisions.
+   NOTE: This data is from `extract_session_decisions()` (unfiltered, lines
+   1875-1945). The envelope path (`_build_decisions()` at
+   `PreCompact_snapshot_capture.py:528`) has partial protection via
+   `_is_decision_noise()`, so user-facing impact may be lower than this
+   standalone-path figure implies.
 
 3. **F5 — Pending-ops completion detection is broken.** Code looks for entries
    with `type == "tool"`, but production transcripts nest tool results as
@@ -437,17 +442,18 @@ the context-threshold nudge (P1), which uses the UserPromptSubmit injection chan
 
 **Reason deferred (revised 2026-07-11):** Previously deferred in favor of
 agent-authored handoff (which is now REJECTED). It is now the standing fallback to
-the context-threshold nudge. The nudge is advisory text with a known ~50-70%
-compliance ceiling (same mechanism as skill routing directives — documented in
-`handoff-pre-compact-problems` wiki page). When the model ignores the nudge,
-extraction quality is unchanged; the trio extraction becomes the mechanism for
-producing quality-structured handoff content.
+the context-threshold nudge. The nudge is advisory text with a ~50% compliance rate
+for skill routing (extrapolated — context-nudge compliance is unmeasured, see P1
+Compliance caveat). When the model ignores the nudge, extraction quality is
+unchanged; the trio extraction becomes the mechanism for producing quality-structured
+handoff content.
 
 Implementation pathway: Use the proven infrastructure from
 `Stop_semantic_critic.py:1042-1161` (ThreadPoolExecutor, conservative combination,
 fail-open with 3-way majority). The `hook_external_llm_policy.md` documents the
 approved pattern with all four safeguards. See P1 context-threshold nudge for
-precedence order: nudge → regex fallback → LLM trio as guaranteed floor.
+precedence order: nudge → regex fallback → LLM trio (planned floor, not yet
+implemented).
 
 ### Dynamic freshness (session-duration scaling)
 

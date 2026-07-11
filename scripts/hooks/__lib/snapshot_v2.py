@@ -58,11 +58,11 @@ VALID_ENHANCEMENT_FIELDS = {
     "clarified_intent",
     "missing_details",
     "safety_flags",
-    "estimated_tokens",
-    "inferred_subject",
     "confidence",
     "analysis",
-}  # Valid EnhancementResult fields from prompt-enhancer
+}  # Valid EnhancementResult fields from prompt-enhancer.
+   # estimated_tokens and inferred_subject were removed 2026-07-11:
+   # no code consumed the field values; snapshot is an opaque carrier.
 OPTIONAL_DECISION_FIELDS = set()  # Optional fields allowed in decisions
 OPTIONAL_SNAPSHOT_FIELDS = {
     "quality_score",

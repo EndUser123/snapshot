@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -38,6 +39,8 @@ def _append_to_session_registry(
     transcript_path: str,
     cwd: str,
     artifacts_root: Path,
+    worktree: str = "",
+    worktree_path: str = "",
 ) -> None:
     """Append current session to session_registry.jsonl.
 
@@ -56,6 +59,8 @@ def _append_to_session_registry(
         "progress_percent": 0,
         "handoff_path": "",
         "cwd": cwd,
+        "worktree": worktree,
+        "worktree_path": worktree_path,
     }
 
     try:
@@ -97,6 +102,15 @@ def run(data: dict) -> dict | None:
     project_root = os.environ.get("CLAUDE_PROJECT_DIR") or "P:/"
     artifacts_root = Path(project_root) / ".claude" / ".artifacts"
 
+    worktree = ""
+    worktree_path = ""
+    if cwd:
+        m = re.search(r"\.claude[/\\]worktrees[/\\]([^/\\]+)", cwd)
+        if m:
+            idx = m.end()
+            worktree = m.group(1)
+            worktree_path = cwd[:idx].rstrip("/\\")
+
     identity = {
         "terminal": {
             "id": terminal_id,
@@ -106,6 +120,8 @@ def run(data: dict) -> dict | None:
             "session_id": data.get("session_id", ""),
             "transcript_path": data.get("transcript_path", ""),
             "cwd": cwd,
+            "worktree": worktree,
+            "worktree_path": worktree_path,
         },
         "captured_at": datetime.now(UTC).isoformat(),
     }
@@ -127,6 +143,8 @@ def run(data: dict) -> dict | None:
         transcript_path=identity["claude"]["transcript_path"],
         cwd=identity["claude"]["cwd"],
         artifacts_root=artifacts_root,
+        worktree=identity["claude"]["worktree"],
+        worktree_path=identity["claude"]["worktree_path"],
     )
 
     _prune_session_registry(artifacts_root / "session_registry.jsonl")

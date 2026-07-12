@@ -984,6 +984,16 @@ def run(input_data: dict[str, Any]) -> dict[str, Any]:
                     terminal_id, registry_terminal_id
                 )
 
+            worktree = ""
+            worktree_path = ""
+            cwd_val = input_data.get("cwd", "")
+            if cwd_val:
+                cwd_val = cwd_val.replace("\\", "/") if cwd_val else ""
+                m = re.search(r"\.claude/worktrees/([^/]+)", cwd_val)
+                if m:
+                    worktree = m.group(1)
+                    worktree_path = cwd_val[:m.end()].rstrip("/")
+
             entry = {
                 "ts": datetime.now(UTC).isoformat(),
                 "terminal_id": registry_terminal_id,
@@ -992,7 +1002,9 @@ def run(input_data: dict[str, Any]) -> dict[str, Any]:
                 "goal": goal[:200],
                 "progress_percent": progress_percent,
                 "handoff_path": str(saved_path),
-                "cwd": input_data.get("cwd", ""),
+                "cwd": cwd_val,
+                "worktree": worktree,
+                "worktree_path": worktree_path,
             }
             with registry_path.open("a", encoding="utf-8") as rf:
                 rf.write(json.dumps(entry, ensure_ascii=False) + "\n")

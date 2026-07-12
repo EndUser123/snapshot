@@ -988,11 +988,10 @@ def run(input_data: dict[str, Any]) -> dict[str, Any]:
             worktree_path = ""
             cwd_val = input_data.get("cwd", "")
             if cwd_val:
-                cwd_val = cwd_val.replace("\\", "/") if cwd_val else ""
-                m = re.search(r"\.claude/worktrees/([^/]+)", cwd_val)
+                m = re.search(r"\.claude[/\]worktrees[/\]([^/\]+)", cwd_val)
                 if m:
                     worktree = m.group(1)
-                    worktree_path = cwd_val[:m.end()].rstrip("/")
+                    worktree_path = cwd_val[:m.end()].rstrip("/\\")
 
             entry = {
                 "ts": datetime.now(UTC).isoformat(),

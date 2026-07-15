@@ -35,7 +35,7 @@ for _p in (_package_root, _hooks_dir):
         sys.path.insert(0, str(_p))
 
 # Import via the real module path (not the symlink name).
-import scripts.hooks.userpromptsubmit_task_injector as _mod  # noqa: E402
+import scripts.hooks.snapshot_UserPromptSubmit as _mod  # noqa: E402
 
 
 def _make_envelope(
@@ -77,7 +77,7 @@ def _make_marker(
     }
 
 
-_MOD_PATH = "scripts.hooks.userpromptsubmit_task_injector"
+_MOD_PATH = "scripts.hooks.snapshot_UserPromptSubmit"
 
 
 class TestNoMarker:
@@ -87,7 +87,7 @@ class TestNoMarker:
 
         ctx = HookContext(prompt="do something", data={"terminal_id": "t1"})
         with tempfile.TemporaryDirectory() as tmpdir:
-            with patch(f"{_MOD_PATH}.STATE_DIR", Path(tmpdir)):
+            with patch(f"{_MOD_PATH}._locate_hooks_state_dir", return_value=Path(tmpdir)):
                 result = _mod.handoff_task_injector_hook(ctx)
         assert result.context is None
 
@@ -100,7 +100,7 @@ class TestExpiredMarker:
         ctx = HookContext(prompt="do something", data={"terminal_id": "t_expired"})
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
-            with patch(f"{_MOD_PATH}.STATE_DIR", tmp):
+            with patch(f"{_MOD_PATH}._locate_hooks_state_dir", return_value=tmp):
                 marker_file = _mod._marker_path("t_expired")
                 marker_file.parent.mkdir(parents=True, exist_ok=True)
                 marker = _make_marker(
@@ -126,7 +126,7 @@ class TestMissingHandoffFile:
         ctx = HookContext(prompt="do something", data={"terminal_id": "t_missing"})
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
-            with patch(f"{_MOD_PATH}.STATE_DIR", tmp):
+            with patch(f"{_MOD_PATH}._locate_hooks_state_dir", return_value=tmp):
                 marker_file = _mod._marker_path("t_missing")
                 marker_file.parent.mkdir(parents=True, exist_ok=True)
                 marker = _make_marker("/nonexistent/handoff.json", "t_missing")
@@ -161,7 +161,7 @@ class TestSuccessfulRecovery:
         ctx = HookContext(prompt="continue", data={"terminal_id": "t_good"})
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
-            with patch(f"{_MOD_PATH}.STATE_DIR", tmp):
+            with patch(f"{_MOD_PATH}._locate_hooks_state_dir", return_value=tmp):
                 self._setup_valid_state(tmp, "t_good", envelope)
                 result = _mod.handoff_task_injector_hook(ctx)
 
@@ -176,7 +176,7 @@ class TestSuccessfulRecovery:
         ctx = HookContext(prompt="continue", data={"terminal_id": "t_goal"})
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
-            with patch(f"{_MOD_PATH}.STATE_DIR", tmp):
+            with patch(f"{_MOD_PATH}._locate_hooks_state_dir", return_value=tmp):
                 self._setup_valid_state(tmp, "t_goal", envelope)
                 result = _mod.handoff_task_injector_hook(ctx)
 
@@ -193,7 +193,7 @@ class TestSuccessfulRecovery:
         ctx = HookContext(prompt="continue", data={"terminal_id": "t_oneshot"})
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
-            with patch(f"{_MOD_PATH}.STATE_DIR", tmp):
+            with patch(f"{_MOD_PATH}._locate_hooks_state_dir", return_value=tmp):
                 _, marker_file = self._setup_valid_state(tmp, "t_oneshot", envelope)
                 result1 = _mod.handoff_task_injector_hook(ctx)
                 result2 = _mod.handoff_task_injector_hook(
@@ -211,7 +211,7 @@ class TestSuccessfulRecovery:
         ctx = HookContext(prompt="continue", data={"terminal_id": "t_tp"})
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
-            with patch(f"{_MOD_PATH}.STATE_DIR", tmp):
+            with patch(f"{_MOD_PATH}._locate_hooks_state_dir", return_value=tmp):
                 self._setup_valid_state(tmp, "t_tp", envelope)
                 result = _mod.handoff_task_injector_hook(ctx)
 
@@ -226,19 +226,20 @@ class TestSuccessfulRecovery:
         assert "/sessions/abc123.jsonl" not in result.context
 
     def test_context_contains_current_task(self) -> None:
-        """Injected context must include the current task."""
+        """Injected context must include the active goal/next-step contract."""
         from UserPromptSubmit_modules.base import HookContext
 
         envelope = _make_envelope(current_task="Write the injector hook")
         ctx = HookContext(prompt="continue", data={"terminal_id": "t_ct"})
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
-            with patch(f"{_MOD_PATH}.STATE_DIR", tmp):
+            with patch(f"{_MOD_PATH}._locate_hooks_state_dir", return_value=tmp):
                 self._setup_valid_state(tmp, "t_ct", envelope)
                 result = _mod.handoff_task_injector_hook(ctx)
 
         assert result.context is not None
-        assert "Write the injector hook" in result.context
+        assert "Test goal" in result.context
+        assert "Do the next thing" in result.context
 
 
 class TestKillSwitch:
@@ -253,7 +254,7 @@ class TestKillSwitch:
             handoff_file = tmp / "t_disabled_handoff.json"
             handoff_file.write_text(json.dumps(envelope), encoding="utf-8")
 
-            with patch(f"{_MOD_PATH}.STATE_DIR", tmp):
+            with patch(f"{_MOD_PATH}._locate_hooks_state_dir", return_value=tmp):
                 marker_file = _mod._marker_path("t_disabled")
                 marker_file.parent.mkdir(parents=True, exist_ok=True)
                 marker = _make_marker(str(handoff_file), "t_disabled")

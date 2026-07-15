@@ -207,7 +207,15 @@ def _build_recovery_message(envelope: dict) -> str:
     try:
         import importlib
         snapshot_v2 = importlib.import_module("scripts.hooks.__lib.snapshot_v2")
-        return snapshot_v2.build_restore_message_compact(envelope)
+        message = snapshot_v2.build_restore_message_compact(envelope)
+        full_path = (envelope.get("resume_snapshot") or {}).get("full_user_message_path")
+        if full_path:
+            message += (
+                "\n\nThe complete oversized prior user message is preserved at "
+                f"`{full_path}`. Read that file fully before continuing if its "
+                "details are needed; the snapshot preview is intentionally bounded."
+            )
+        return message
     except ImportError as exc:
         import logging
         logging.getLogger(__name__).warning(

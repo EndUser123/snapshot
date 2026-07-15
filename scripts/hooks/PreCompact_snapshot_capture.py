@@ -73,16 +73,6 @@ from scripts.hooks.__lib.transcript import (  # noqa: F401
 )
 from scripts.hooks.__lib.user_intent import capture_pending_questions
 
-# Import local hooks utilities for MEMORY.md corrections ranking
-_local_utils_path = Path.home() / ".claude" / "projects" / "P--" / ".claude" / "hooks" / "utils"
-_utility_paths = [
-    _local_utils_path,
-    Path("P:/.claude/hooks/utils"),
-]
-for _utils_path in _utility_paths:
-    if _utils_path.exists() and str(_utils_path) not in sys.path:
-        sys.path.insert(0, str(_utils_path))
-
 SESSION_PATTERNS = {
     "planning": [
         r"/plan-workflow",
@@ -127,6 +117,18 @@ def _bound_last_user_message(message: str | None) -> str | None:
         + marker
         + message[-tail_chars:]
     )
+
+
+def _externalize_large_user_message(
+    message: str | None, handoff_dir: Path, terminal_id: str
+) -> str | None:
+    """Persist the complete oversized message and return its artifact path."""
+    if not message or len(message) <= MAX_LAST_USER_MESSAGE_CHARS:
+        return None
+    handoff_dir.mkdir(parents=True, exist_ok=True)
+    path = handoff_dir / f"{terminal_id}_full_user_message.txt"
+    path.write_text(message, encoding="utf-8")
+    return str(path)
 DECISION_PATTERNS = [
     (
         re.compile(r"\bmust\b|\bdo not\b|\bdon't\b|\bnever\b", re.IGNORECASE),
@@ -171,34 +173,6 @@ def _extract_active_skill(raw_last_user: str) -> str:
     if m:
         return m.group(1)
     return ""
-
-
-def _extract_recent_corrections(
-    goal: str, active_files: list[str], max_count: int = 3
-) -> list[str]:
-    """Extract ranked corrections from user's MEMORY.md.
-
-    Uses the same ranking logic as the local PreCompact.py.
-    """
-    try:
-        from reminder_state import read_memory_md
-        from correction_ranker import rank_corrections
-
-        memory_corrections = read_memory_md()
-        if not memory_corrections:
-            return []
-        recent_corrections = rank_corrections(
-            memory_corrections,
-            goal=goal,
-            active_files=active_files,
-            last_action="",
-            pending_work=[],
-            top_n=max_count,
-        )
-        return recent_corrections
-    except Exception as exc:
-        logger.warning("[PreCompact V2] Failed to extract recent corrections: %s", exc)
-        return []
 
 
 def detect_session_type(user_message: str, active_files: list[str]) -> tuple[str, str]:
@@ -921,7 +895,16 @@ def run(input_data: dict[str, Any]) -> dict[str, Any]:
 
         transcript_chain = _build_transcript_chain(transcript_path, old_snapshot)
         active_skill = _extract_active_skill(raw_last_user or "")
-        recent_corrections = _extract_recent_corrections(goal, active_files)
+        # The snapshot plugin must not import workspace-local reminder utilities.
+        # Optional correction ranking belongs in the owning workspace hook layer;
+        # core snapshot capture remains self-contained.
+        recent_corrections: list[str] = []
+
+        full_user_message_path = _externalize_large_user_message(
+            original_user_message or raw_last_user,
+            storage.handoff_dir,
+            terminal_id,
+        )
 
         # Capture prompt-enhancer artifact if present
         prompt_enhancement: dict[str, Any] | None = None
@@ -968,6 +951,7 @@ def run(input_data: dict[str, Any]) -> dict[str, Any]:
             active_skill=active_skill,
             session_chain=session_chain,
             last_user_message=_bound_last_user_message(raw_last_user),
+            full_user_message_path=full_user_message_path,
             recent_corrections=recent_corrections,
             transcript_chain=transcript_chain,
             prompt_enhancement=prompt_enhancement,

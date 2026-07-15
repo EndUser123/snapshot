@@ -75,8 +75,13 @@ from scripts.hooks.__lib.user_intent import capture_pending_questions
 
 # Import local hooks utilities for MEMORY.md corrections ranking
 _local_utils_path = Path.home() / ".claude" / "projects" / "P--" / ".claude" / "hooks" / "utils"
-if _local_utils_path.exists() and str(_local_utils_path) not in sys.path:
-    sys.path.insert(0, str(_local_utils_path))
+_utility_paths = [
+    _local_utils_path,
+    Path("P:/.claude/hooks/utils"),
+]
+for _utils_path in _utility_paths:
+    if _utils_path.exists() and str(_utils_path) not in sys.path:
+        sys.path.insert(0, str(_utils_path))
 
 SESSION_PATTERNS = {
     "planning": [
@@ -99,6 +104,29 @@ SESSION_EMOJIS = {
     "docs": "📝",
     "general": "📍",
 }
+
+# The handoff must remain useful under pressure.  A slash-command expansion can
+# place tens of thousands of characters in the last user message; the goal,
+# decisions, files, and next step are captured separately below, so retaining
+# the entire expansion only bloats the recovery artifact.
+MAX_LAST_USER_MESSAGE_CHARS = 12_000
+
+
+def _bound_last_user_message(message: str | None) -> str | None:
+    """Keep a bounded preview while preserving both command and tail context."""
+    if not message:
+        return None
+    if len(message) <= MAX_LAST_USER_MESSAGE_CHARS:
+        return message
+    marker = f"\n\n[truncated for handoff size bound: {len(message)} characters]\n\n"
+    available = max(0, MAX_LAST_USER_MESSAGE_CHARS - len(marker))
+    head_chars = available * 2 // 3
+    tail_chars = available - head_chars
+    return (
+        message[:head_chars]
+        + marker
+        + message[-tail_chars:]
+    )
 DECISION_PATTERNS = [
     (
         re.compile(r"\bmust\b|\bdo not\b|\bdon't\b|\bnever\b", re.IGNORECASE),
@@ -939,7 +967,7 @@ def run(input_data: dict[str, Any]) -> dict[str, Any]:
             goal_origin=goal_origin,
             active_skill=active_skill,
             session_chain=session_chain,
-            last_user_message=raw_last_user,
+            last_user_message=_bound_last_user_message(raw_last_user),
             recent_corrections=recent_corrections,
             transcript_chain=transcript_chain,
             prompt_enhancement=prompt_enhancement,

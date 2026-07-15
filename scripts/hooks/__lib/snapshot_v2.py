@@ -601,7 +601,7 @@ def build_resume_snapshot(
     active_skill: str | None = None,  # Skill name extracted from slash command
     session_chain: list[str] | None = None,  # Full session chain (oldest-first session IDs)
     last_user_message: str | None = None,  # Verbatim last user message (ADR-006)
-    full_user_message_path: str | None = None,  # Externalized oversized message
+    user_message_locator: dict[str, Any] | None = None,  # Canonical transcript locator
     recent_corrections: list[str] | None = None,  # MEMORY.md corrections ranked by relevance
     transcript_chain: list[str] | None = None,  # Pre-computed ordered list of transcript paths (newest first)
     prompt_enhancement: dict[str, Any] | None = None,  # EnhancementResult from prompt-enhancer plugin
@@ -648,8 +648,8 @@ def build_resume_snapshot(
         snapshot["session_chain"] = session_chain
     if last_user_message is not None:
         snapshot["last_user_message"] = last_user_message
-    if full_user_message_path is not None:
-        snapshot["full_user_message_path"] = full_user_message_path
+    if user_message_locator is not None:
+        snapshot["user_message_locator"] = user_message_locator
     if active_skill is not None:
         snapshot["active_skill"] = active_skill
     if recent_corrections is not None:

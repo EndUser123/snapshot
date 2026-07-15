@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import logging
 from logging.handlers import RotatingFileHandler
 import os
@@ -119,16 +120,50 @@ def _bound_last_user_message(message: str | None) -> str | None:
     )
 
 
-def _externalize_large_user_message(
-    message: str | None, handoff_dir: Path, terminal_id: str
-) -> str | None:
-    """Persist the complete oversized message and return its artifact path."""
-    if not message or len(message) <= MAX_LAST_USER_MESSAGE_CHARS:
+
+def _text_from_transcript_content(content: Any) -> str:
+    """Extract text from Claude's string/list transcript content."""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return "".join(
+            _text_from_transcript_content(item.get("text", "") if isinstance(item, dict) else item)
+            for item in content
+        )
+    if isinstance(content, dict):
+        return _text_from_transcript_content(
+            content.get("text", content.get("content", ""))
+        )
+    return ""
+
+
+def _locate_last_user_message(transcript_path: str, message: str | None) -> dict[str, Any] | None:
+    """Return a stable locator into the canonical JSONL transcript."""
+    if not message:
         return None
-    handoff_dir.mkdir(parents=True, exist_ok=True)
-    path = handoff_dir / f"{terminal_id}_full_user_message.txt"
-    path.write_text(message, encoding="utf-8")
-    return str(path)
+    try:
+        lines = Path(transcript_path).read_text(encoding="utf-8", errors="replace").splitlines()
+        target = message.strip()
+        for line_number in range(len(lines), 0, -1):
+            try:
+                entry = json.loads(lines[line_number - 1])
+            except json.JSONDecodeError:
+                continue
+            if entry.get("type") != "user":
+                continue
+            extracted = _text_from_transcript_content(entry.get("message", entry.get("content", ""))).strip()
+            if extracted == target:
+                return {
+                    "transcript_path": str(Path(transcript_path)),
+                    "line_start": line_number,
+                    "line_end": line_number,
+                    "entry_id": entry.get("uuid") or entry.get("id"),
+                    "char_count": len(extracted),
+                    "message_sha256": hashlib.sha256(extracted.encode("utf-8")).hexdigest(),
+                }
+    except OSError as exc:
+        logger.warning("[PreCompact V2] Could not locate user message: %s", exc)
+    return None
 DECISION_PATTERNS = [
     (
         re.compile(r"\bmust\b|\bdo not\b|\bdon't\b|\bnever\b", re.IGNORECASE),
@@ -900,10 +935,8 @@ def run(input_data: dict[str, Any]) -> dict[str, Any]:
         # core snapshot capture remains self-contained.
         recent_corrections: list[str] = []
 
-        full_user_message_path = _externalize_large_user_message(
-            original_user_message or raw_last_user,
-            storage.handoff_dir,
-            terminal_id,
+        user_message_locator = _locate_last_user_message(
+            transcript_path, original_user_message or raw_last_user
         )
 
         # Capture prompt-enhancer artifact if present
@@ -951,7 +984,7 @@ def run(input_data: dict[str, Any]) -> dict[str, Any]:
             active_skill=active_skill,
             session_chain=session_chain,
             last_user_message=_bound_last_user_message(raw_last_user),
-            full_user_message_path=full_user_message_path,
+            user_message_locator=user_message_locator,
             recent_corrections=recent_corrections,
             transcript_chain=transcript_chain,
             prompt_enhancement=prompt_enhancement,

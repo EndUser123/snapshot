@@ -208,11 +208,12 @@ def _build_recovery_message(envelope: dict) -> str:
         import importlib
         snapshot_v2 = importlib.import_module("scripts.hooks.__lib.snapshot_v2")
         message = snapshot_v2.build_restore_message_compact(envelope)
-        full_path = (envelope.get("resume_snapshot") or {}).get("full_user_message_path")
-        if full_path:
+        locator = (envelope.get("resume_snapshot") or {}).get("user_message_locator")
+        if locator:
             message += (
-                "\n\nThe complete oversized prior user message is preserved at "
-                f"`{full_path}`. Read that file fully before continuing if its "
+                "\n\nThe complete prior user message is in the canonical transcript at "
+                f"`{locator.get('transcript_path')}`, JSONL line "
+                f"{locator.get('line_start')}. Read that entry fully if its "
                 "details are needed; the snapshot preview is intentionally bounded."
             )
         return message
